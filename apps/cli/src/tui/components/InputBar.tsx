@@ -4,12 +4,23 @@ import { Box, Text, useInput, useApp } from "ink";
 interface InputBarProps {
   onSubmit: (text: string) => void;
   onQuit: () => void;
+  onCycleAgent?: () => void;
+  activeProvider?: string;
   disabled?: boolean;
 }
 
-export const InputBar: React.FC<InputBarProps> = ({ onSubmit, onQuit, disabled }) => {
+export const InputBar: React.FC<InputBarProps> = ({
+  onSubmit,
+  onQuit,
+  onCycleAgent,
+  activeProvider = "agy",
+  disabled,
+}) => {
   const [value, setValue] = useState("");
   const { exit } = useApp();
+
+  const isAiMode = value.startsWith(">");
+  const isCmdMode = value.startsWith("/");
 
   useInput((input, key) => {
     if (disabled) return;
@@ -17,6 +28,11 @@ export const InputBar: React.FC<InputBarProps> = ({ onSubmit, onQuit, disabled }
     if (key.ctrl && input === "c") {
       onQuit();
       exit();
+      return;
+    }
+
+    if (key.tab && onCycleAgent) {
+      onCycleAgent();
       return;
     }
 
@@ -34,12 +50,17 @@ export const InputBar: React.FC<InputBarProps> = ({ onSubmit, onQuit, disabled }
       return;
     }
 
+    if (key.escape) {
+      setValue("");
+      return;
+    }
+
     if (key.backspace || key.delete) {
       setValue((prev) => prev.slice(0, -1));
       return;
     }
 
-    // Ignore other control keys
+    // Ignore up/down navigation for now
     if (key.upArrow || key.downArrow || key.leftArrow || key.rightArrow || key.pageDown || key.pageUp) {
       return;
     }
@@ -49,25 +70,46 @@ export const InputBar: React.FC<InputBarProps> = ({ onSubmit, onQuit, disabled }
     }
   });
 
+  let borderColor = "cyan";
+  let modeBadge = "💬 CHAT";
+  let modeColor = "cyan";
+
+  if (isAiMode) {
+    borderColor = "yellow";
+    modeBadge = `🤖 AI (${activeProvider})`;
+    modeColor = "yellow";
+  } else if (isCmdMode) {
+    borderColor = "magenta";
+    modeBadge = "⚡ CMD";
+    modeColor = "magenta";
+  }
+
   return (
     <Box
       borderStyle="round"
-      borderColor={value.startsWith(">") ? "yellow" : "cyan"}
+      borderColor={borderColor}
       paddingX={1}
       flexDirection="row"
+      justifyContent="space-between"
     >
-      <Text bold color={value.startsWith(">") ? "yellow" : "cyan"}>
-        {value.startsWith(">") ? "🤖 AI > " : "💬 > "}
-      </Text>
-      <Text color={value.startsWith(">") ? "yellow" : "white"}>{value}</Text>
-      <Text color="gray">█</Text>
-      {value.length === 0 && (
-        <Box marginLeft={2}>
-          <Text color="gray">
-            (Chat: text | AI Agent: &gt; prompt e.g. &gt; inspect repo | /help, /quit)
-          </Text>
-        </Box>
-      )}
+      <Box flexDirection="row" flexGrow={1}>
+        <Text bold color={modeColor}>
+          {modeBadge} ❯{" "}
+        </Text>
+        <Text color={isAiMode ? "yellow" : "white"}>{value}</Text>
+        <Text color="gray">█</Text>
+        {value.length === 0 && (
+          <Box marginLeft={2}>
+            <Text color="gray">
+              (Type message to chat │ &gt; &lt;prompt&gt; for AI │ /help for commands)
+            </Text>
+          </Box>
+        )}
+      </Box>
+
+      <Box>
+        <Text color="gray">[Tab: switch agent │ Esc: clear]</Text>
+      </Box>
     </Box>
   );
 };

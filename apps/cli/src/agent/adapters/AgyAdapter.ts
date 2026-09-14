@@ -16,6 +16,6 @@ export class AgyAdapter extends BaseProcessAdapter {
   }
 
   protected buildArguments(prompt: string): string[] {
-    return [prompt];
+    return ["-p", prompt];
   }
 }

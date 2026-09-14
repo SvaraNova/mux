@@ -19,27 +19,34 @@ function formatTime(isoString: string): string {
   }
 }
 
-export const EventStream: React.FC<EventStreamProps> = ({ events, height = 14 }) => {
-  // Show the last N events to fit the screen
+export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 }) => {
   const visibleEvents = events.slice(-height);
 
   return (
     <Box
-      borderStyle="single"
+      borderStyle="round"
       borderColor="gray"
       flexDirection="column"
       flexGrow={1}
       paddingX={1}
       minHeight={height}
     >
-      <Box marginBottom={1}>
-        <Text bold underline color="cyan">
-          ACTIVITY & MESSAGES
-        </Text>
+      <Box marginBottom={1} flexDirection="row" justifyContent="space-between">
+        <Box>
+          <Text bold color="cyan">
+            ⚡ ACTIVITY &amp; CHAT
+          </Text>
+        </Box>
+        <Box>
+          <Text color="gray">{events.length} events</Text>
+        </Box>
       </Box>
 
       {visibleEvents.length === 0 ? (
-        <Text color="gray">No activity yet. Say hello or type /help for commands.</Text>
+        <Box flexDirection="column">
+          <Text color="gray">Workspace is quiet. Say hello or dispatch instructions to agents!</Text>
+          <Text color="gray">Shortcuts: &gt; &lt;task&gt; for AI │ Type message to chat with team</Text>
+        </Box>
       ) : (
         visibleEvents.map((evt) => {
           const time = formatTime(evt.timestamp);
@@ -47,33 +54,30 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 14 })
 
           if (evt.type === "user.joined") {
             return (
-              <Box key={evt.id}>
-                <Text color="gray">[{time}] </Text>
-                <Text color="green" bold>
-                  ● {evt.payload?.user?.name || senderName} joined the workspace
-                </Text>
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="green">● </Text>
+                <Text color="white" bold>{evt.payload?.user?.name || senderName}</Text>
+                <Text color="gray"> joined the workspace</Text>
               </Box>
             );
           }
 
           if (evt.type === "user.left") {
             return (
-              <Box key={evt.id}>
-                <Text color="gray">[{time}] </Text>
-                <Text color="red">
-                  ○ {evt.payload?.name || senderName} left
-                </Text>
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="gray">○ {evt.payload?.name || senderName} left</Text>
               </Box>
             );
           }
 
           if (evt.type === "message.channel") {
             return (
-              <Box key={evt.id}>
-                <Text color="gray">[{time}] </Text>
-                <Text color="blue" bold>
-                  &lt;{senderName}&gt;:{" "}
-                </Text>
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="cyan" bold>{senderName} </Text>
+                <Text color="gray">› </Text>
                 <Text color="white">{evt.payload?.text}</Text>
               </Box>
             );
@@ -81,31 +85,89 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 14 })
 
           if (evt.type === "message.direct") {
             return (
-              <Box key={evt.id}>
-                <Text color="gray">[{time}] </Text>
-                <Text color="magenta" bold>
-                  [DM] &lt;{senderName}&gt; → &lt;{evt.target?.id}&gt;:{" "}
-                </Text>
-                <Text color="magenta">{evt.payload?.text}</Text>
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="magenta" bold>{senderName} </Text>
+                <Text color="gray">› </Text>
+                <Text color="magenta">{evt.target?.id} (DM) › </Text>
+                <Text color="white">{evt.payload?.text}</Text>
               </Box>
             );
+          }
+
+          if (evt.type === "agent.registered") {
+            const providerName = evt.payload?.name || evt.payload?.provider || "Agent";
+            return (
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="magenta">🤖 </Text>
+                <Text color="white" bold>{providerName}</Text>
+                <Text color="gray"> linked to </Text>
+                <Text color="cyan">{senderName}</Text>
+              </Box>
+            );
+          }
+
+          if (evt.type === "agent.status") {
+            const provider = evt.payload?.provider || "agent";
+            const status = evt.payload?.status;
+            const task = evt.payload?.task;
+
+            if (status === "working") {
+              return (
+                <Box key={evt.id} flexDirection="row">
+                  <Text color="gray">{time} </Text>
+                  <Text color="yellow">⚡ </Text>
+                  <Text color="yellow" bold>{provider}</Text>
+                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="yellow">{task ? `"${task}"` : "working..."}</Text>
+                </Box>
+              );
+            }
+
+            if (status === "idle") {
+              return (
+                <Box key={evt.id} flexDirection="row">
+                  <Text color="gray">{time} </Text>
+                  <Text color="green">✓ </Text>
+                  <Text color="green" bold>{provider}</Text>
+                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="green">ready / completed task</Text>
+                </Box>
+              );
+            }
+
+            if (status === "error") {
+              return (
+                <Box key={evt.id} flexDirection="row">
+                  <Text color="gray">{time} </Text>
+                  <Text color="red">⚠ </Text>
+                  <Text color="red" bold>{provider}</Text>
+                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="red">task failed or exited with error</Text>
+                </Box>
+              );
+            }
           }
 
           if (evt.type === "system.event") {
+            const level = evt.payload?.level;
+            const color = level === "error" ? "red" : level === "warn" ? "yellow" : "cyan";
             return (
-              <Box key={evt.id}>
-                <Text color="gray">[{time}] </Text>
-                <Text color="yellow">[SYS] {evt.payload?.message}</Text>
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color={color}>ℹ </Text>
+                <Text color={color}>{evt.payload?.message}</Text>
               </Box>
             );
           }
 
-          // Generic fallback
+          // Fallback for any other custom event
           return (
-            <Box key={evt.id}>
-              <Text color="gray">[{time}] </Text>
+            <Box key={evt.id} flexDirection="row">
+              <Text color="gray">{time} </Text>
               <Text color="gray">[{evt.type}] </Text>
-              <Text>{JSON.stringify(evt.payload)}</Text>
+              <Text color="white">{typeof evt.payload === "string" ? evt.payload : evt.payload?.message || evt.type}</Text>
             </Box>
           );
         })

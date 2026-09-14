@@ -19,19 +19,21 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
   activeProvider,
   agents,
   targetDir,
-  height = 9,
+  height = 10,
 }) => {
   const visibleLogs = logs.slice(-height);
 
   let statusColor = "gray";
-  let statusText = status.toUpperCase();
+  let statusBadge = "IDLE";
   if (status === "idle") {
     statusColor = "green";
+    statusBadge = "● IDLE";
   } else if (status === "working") {
     statusColor = "yellow";
-    statusText = currentTask ? `WORKING: ${currentTask}` : "WORKING...";
+    statusBadge = currentTask ? `⚡ WORKING: ${currentTask}` : "⚡ WORKING...";
   } else if (status === "error") {
     statusColor = "red";
+    statusBadge = "⚠ ERROR";
   }
 
   return (
@@ -43,24 +45,24 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
       minHeight={height}
       marginY={1}
     >
-      {/* Header bar: Title, Target Dir, and Status */}
+      {/* Header bar: Title, Target Dir, and Status Badge */}
       <Box flexDirection="row" justifyContent="space-between" marginBottom={0}>
         <Box>
-          <Text bold color="magenta">
-            🤖 MULTI-AGENT TERMINAL
+          <Text bold color="cyan">
+            🤖 AI AGENT TERMINAL
           </Text>
           <Text color="gray"> │ </Text>
-          <Text color="gray">dir: </Text>
+          <Text color="gray">📂 dir: </Text>
           <Text color="white">{targetDir}</Text>
         </Box>
         <Box>
           <Text color={statusColor} bold>
-            ● {statusText}
+            {statusBadge}
           </Text>
         </Box>
       </Box>
 
-      {/* Agent Provider Selector Tabs */}
+      {/* Provider Selector Tabs */}
       <Box flexDirection="row" marginY={1}>
         <Text color="gray">Providers: </Text>
         {agents.map((ag) => {
@@ -78,10 +80,10 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
             <Box key={ag.provider} marginRight={1}>
               <Text
                 bold={isActive}
-                color={badgeColor}
-                inverse={isActive}
+                color={isActive ? "black" : badgeColor}
+                backgroundColor={isActive ? (ag.status === "working" ? "yellow" : "cyan") : undefined}
               >
-                {` ${ag.provider}${isActive ? " (active)" : ""} `}
+                {` ${isActive ? "★ " : ""}${ag.provider}${isActive ? " (active)" : ""} `}
               </Text>
               {!ag.isAvailable && (
                 <Text color="gray"> (uninstalled)</Text>
@@ -89,16 +91,25 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
             </Box>
           );
         })}
+        <Box marginLeft={1}>
+          <Text color="gray">[Tab: cycle agent]</Text>
+        </Box>
       </Box>
 
-      {/* Output Area */}
+      {/* Output / Log Area */}
       {visibleLogs.length === 0 ? (
-        <Box flexDirection="column">
-          <Text color="gray">
-            Multi-agent relay active. Send prompts to active agent ({activeProvider}) with &gt; &lt;task&gt;,
+        <Box flexDirection="column" paddingY={1}>
+          <Text color="white" bold>
+            💡 AI Agents ready for commands:
           </Text>
           <Text color="gray">
-            or route directly to any provider: &gt; @claude &lt;task&gt; │ &gt; @codex &lt;task&gt; │ &gt; @agy &lt;task&gt;
+            {"  "}• Run with active agent:  <Text color="yellow">&gt; check repo structure</Text>
+          </Text>
+          <Text color="gray">
+            {"  "}• Direct to specific agent: <Text color="yellow">&gt; @claude review PR</Text>  │  <Text color="yellow">&gt; @codex write tests</Text>
+          </Text>
+          <Text color="gray">
+            {"  "}• Press <Text color="cyan">&lt;Tab&gt;</Text> to switch active provider or type <Text color="cyan">/agent use &lt;provider&gt;</Text>
           </Text>
         </Box>
       ) : (
@@ -106,30 +117,34 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
           const providerTag = log.provider ? `[${log.provider}] ` : "";
           if (log.type === "prompt") {
             return (
-              <Box key={log.id}>
+              <Box key={log.id} flexDirection="row">
                 <Text color="yellow" bold>
-                  {log.text}
+                  ❯ {providerTag}{log.text.replace(/^\[.*?\]\s*>\s*/, "")}
                 </Text>
               </Box>
             );
           }
           if (log.type === "stderr") {
             return (
-              <Box key={log.id}>
-                <Text color="red">{providerTag}{log.text}</Text>
+              <Box key={log.id} flexDirection="row">
+                <Text color="red">│ ⚠ {providerTag}{log.text}</Text>
               </Box>
             );
           }
           if (log.type === "system") {
+            const isSuccess = log.text.startsWith("✓");
+            const isError = log.text.startsWith("⚠") || log.text.includes("Failed") || log.text.includes("Error");
+            const sysColor = isSuccess ? "green" : isError ? "red" : "cyan";
             return (
-              <Box key={log.id}>
-                <Text color="cyan">{providerTag}{log.text}</Text>
+              <Box key={log.id} flexDirection="row">
+                <Text color={sysColor}>{log.text}</Text>
               </Box>
             );
           }
           return (
-            <Box key={log.id}>
-              <Text color="white">{providerTag}{log.text}</Text>
+            <Box key={log.id} flexDirection="row">
+              <Text color="gray">│ </Text>
+              <Text color="white">{log.text}</Text>
             </Box>
           );
         })

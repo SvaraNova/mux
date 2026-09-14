@@ -98,12 +98,6 @@ export const App: React.FC<AppProps> = ({
       // Notify relay server
       if (client.isConnected()) {
         client.sendAgentStatus(payload.agentId, payload.status, payload.task);
-
-        if (payload.status === "working" && payload.task) {
-          client.sendMessage(`🤖 [${payload.provider} is working on]: ${payload.task}`, "general");
-        } else if (payload.status === "idle") {
-          client.sendMessage(`🤖 [${payload.provider} finished task]`, "general");
-        }
       }
     };
 
@@ -440,6 +434,13 @@ export const App: React.FC<AppProps> = ({
     client.sendMessage(input, "general");
   };
 
+  const handleCycleAgent = () => {
+    const providers: AgentProvider[] = ["agy", "codex", "claude"];
+    const idx = providers.indexOf(activeProvider);
+    const nextProvider = providers[(idx + 1) % providers.length];
+    registry.setActive(nextProvider);
+  };
+
   const handleQuit = () => {
     client.disconnect();
     if (onExit) onExit();
@@ -470,7 +471,12 @@ export const App: React.FC<AppProps> = ({
         <EventStream events={events} height={10} />
       </Box>
 
-      <InputBar onSubmit={handleSubmit} onQuit={handleQuit} />
+      <InputBar
+        onSubmit={handleSubmit}
+        onQuit={handleQuit}
+        onCycleAgent={handleCycleAgent}
+        activeProvider={activeProvider}
+      />
     </Box>
   );
 };

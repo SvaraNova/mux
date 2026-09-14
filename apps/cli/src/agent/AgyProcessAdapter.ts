@@ -87,7 +87,7 @@ export class AgyProcessAdapter extends EventEmitter {
         PATH: `${path.join(os.homedir(), ".local", "bin")}:${process.env.PATH || ""}`,
       };
 
-      this.currentProcess = spawn(this.binaryPath, [prompt], {
+      this.currentProcess = spawn(this.binaryPath, ["-p", prompt], {
         cwd: this.targetDir,
         env: childEnv,
       });

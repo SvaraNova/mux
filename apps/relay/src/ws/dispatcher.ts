@@ -4,6 +4,7 @@ import {
   type ClientMessage,
   type ServerMessage,
   type RelayEvent,
+  type ActiveUser,
 } from "@mux/protocol";
 import type { MuxDatabase } from "@mux/database";
 import type { ConnectionManager, ClientConnection } from "./connectionManager.js";
@@ -98,14 +99,25 @@ export class EventDispatcher {
     // Associate connection
     this.connections.associateUser(conn.socketId, workspace.id, message.user.id, message.user.name);
 
-    // List active users
+    // List active users accurately based on live sockets
+    const currentConns = this.connections.getByWorkspace(workspace.id);
+    const connectedUserIds = new Set(currentConns.map((c) => c.userId).filter(Boolean));
+    connectedUserIds.add(message.user.id); // this user is joining now
+
     const allUsers = this.db.users.listByWorkspace(workspace.id);
-    const activeUsers = allUsers.map((u) => {
+    const seenIds = new Set<string>();
+    const activeUsers: ActiveUser[] = [];
+
+    for (const u of allUsers) {
+      if (seenIds.has(u.id)) continue;
+      seenIds.add(u.id);
+
+      const isActuallyOnline = connectedUserIds.has(u.id);
       const agentRow = this.db.agents.findByUserId(u.id);
-      return {
+      activeUsers.push({
         id: u.id,
         name: u.name,
-        isOnline: u.is_online === 1,
+        isOnline: isActuallyOnline,
         lastSeenAt: u.last_seen_at,
         agent: agentRow
           ? {
@@ -117,8 +129,8 @@ export class EventDispatcher {
               currentTask: agentRow.current_task,
             }
           : undefined,
-      };
-    });
+      });
+    }
 
     // List recent events
     const recentEvents = this.db.events.listRecent(workspace.id, 50);

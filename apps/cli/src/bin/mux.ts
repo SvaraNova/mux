@@ -47,7 +47,7 @@ program
     const port = parseInt(options.port, 10);
     const projectName = options.project || path.basename(targetDir) || "mux";
     const userName = options.user;
-    const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
+    const userId = `user-${userName.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`;
     const dbPath = options.db || path.join(targetDir, ".mux", "relay.db");
     const initialProvider = options.agent || "agy";
 
@@ -116,7 +116,7 @@ program
     const targetDir = path.resolve(dirArg || options.dir || process.cwd());
     const projectName = options.project || path.basename(targetDir) || "mux";
     const userName = options.user;
-    const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
+    const userId = `user-${userName.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`;
     const initialProvider = options.agent || "agy";
 
     const client = new RelayClient({

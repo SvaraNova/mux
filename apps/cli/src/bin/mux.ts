@@ -63,7 +63,7 @@ program
       const escapedDir = targetDir.replace(/"/g, '\\"');
       const escapedProject = projectName.replace(/"/g, '\\"');
       const escapedUser = userName.replace(/"/g, '\\"');
-      const muxCommand = `npx mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"`;
+      const muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"`;
 
       SplitMultiplexer.launch({
         agent: initialProvider,
@@ -152,7 +152,7 @@ program
       const escapedProject = projectName.replace(/"/g, '\\"');
       const escapedUser = userName.replace(/"/g, '\\"');
       const codeArg = options.code ? ` --code "${options.code}"` : "";
-      const muxCommand = `npx mux join "${url}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
+      const muxCommand = `mux join "${url}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
 
       SplitMultiplexer.launch({
         agent: initialProvider,
@@ -217,10 +217,10 @@ program
     let muxCommand: string;
     if (options.join) {
       const codeArg = options.code ? ` --code "${options.code}"` : "";
-      muxCommand = `npx mux join "${options.join}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
+      muxCommand = `mux join "${options.join}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
     } else {
       const port = parseInt(options.port || "7331", 10);
-      muxCommand = `npx mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"`;
+      muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"`;
     }
 
     SplitMultiplexer.launch({

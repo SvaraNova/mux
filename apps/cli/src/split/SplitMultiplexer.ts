@@ -71,7 +71,7 @@ export class SplitMultiplexer {
         stdio: "inherit",
       });
       // In current pane, execute agent
-      execSync(`cd "${cwd}" && ${agentCmd}`, { stdio: "inherit" });
+      spawnSync(agentCmd, { shell: true, cwd, stdio: "inherit" });
       return;
     }
 
@@ -128,15 +128,14 @@ export class SplitMultiplexer {
           end tell
         `;
         spawnSync("osascript", ["-e", appleScript], { stdio: "pipe" });
-
         console.log(chalk.green("Companion window opened for " + agentCmd));
-        console.log(chalk.gray("Starting mux in current terminal...\n"));
-
-        execSync(`cd "${cwd}" && ${muxCmd}`, { stdio: "inherit" });
-        return;
       } catch (err: any) {
         console.warn(chalk.yellow(`Could not launch companion window: ${err.message}`));
       }
+
+      console.log(chalk.gray("Starting mux in current terminal...\n"));
+      const res = spawnSync(muxCmd, { shell: true, cwd, stdio: "inherit" });
+      process.exit(res.status ?? 0);
     }
 
     // Fallback: Instructions on installing tmux
@@ -149,6 +148,7 @@ export class SplitMultiplexer {
       console.log(chalk.bold("   sudo apt-get install tmux\n"));
     }
     console.log(chalk.gray("Starting mux in current window directly..."));
-    execSync(`cd "${cwd}" && ${muxCmd}`, { stdio: "inherit" });
+    const res = spawnSync(muxCmd, { shell: true, cwd, stdio: "inherit" });
+    process.exit(res.status ?? 0);
   }
 }

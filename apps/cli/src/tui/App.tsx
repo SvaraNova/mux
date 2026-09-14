@@ -7,6 +7,7 @@ import { Header } from "./components/Header.js";
 import { UserList } from "./components/UserList.js";
 import { EventStream } from "./components/EventStream.js";
 import { InputBar } from "./components/InputBar.js";
+import { Banner } from "./components/Banner.js";
 
 interface AppProps {
   client: RelayClient;
@@ -190,6 +191,7 @@ export const App: React.FC<AppProps> = ({
 
   return (
     <Box flexDirection="column" padding={1}>
+      <Banner />
       <Header
         projectName={projectName}
         joinCode={joinCode}

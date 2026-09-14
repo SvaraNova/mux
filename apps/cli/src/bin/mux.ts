@@ -3,17 +3,32 @@ import { Command } from "commander";
 import os from "node:os";
 import crypto from "node:crypto";
 import React from "react";
+import chalk from "chalk";
 import { render } from "ink";
 import { createRelayServer } from "@mux/relay";
 import { RelayClient } from "../client/RelayClient.js";
 import { App } from "../tui/App.js";
+import { BANNER_TEXT } from "../tui/components/Banner.js";
+
+function getEditorialHeader(): string {
+  return [
+    chalk.cyan.bold(BANNER_TEXT),
+    chalk.gray("  The Multiplayer Terminal for ") +
+      chalk.yellow.bold("Humans ") +
+      chalk.gray("& ") +
+      chalk.magenta.bold("Coding Agents") +
+      chalk.gray(" │ LAN Realtime Relay"),
+    "",
+  ].join("\n");
+}
 
 const program = new Command();
 
 program
   .name("mux")
   .description("mux - Collaborative AI Development TUI")
-  .version("0.1.0");
+  .version("0.1.0")
+  .addHelpText("beforeAll", () => getEditorialHeader());
 
 // Command: mux host
 program
@@ -128,6 +143,7 @@ program
   .option("--db <path>", "Path to SQLite database")
   .action(async (options) => {
     const port = parseInt(options.port, 10);
+    console.log(getEditorialHeader());
     const relay = await createRelayServer({
       port,
       host: options.host,

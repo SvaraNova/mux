@@ -210,16 +210,17 @@ Set-Alias -Name mux -Value "$((Get-Location).Path)\apps\cli\dist\bin\mux.js"
 ### 1. Host a Workspace (Terminal 1)
 To start the collaboration server and open the interactive TUI:
 ```bash
-mux host --project my-project --user Alice
+mux host --project my-project --user Alice --agent agy
 ```
 * Generates a unique room Join Code (e.g. `MY-P-4B9A`).
 * Starts the WebSocket relay server on `ws://0.0.0.0:7331`.
+* Sets the default active agent provider (`agy`, `codex`, or `claude`).
 * Stores event logs in `my-project/.mux/relay.db`.
 
 ### 2. Teammate Joins (Terminal 2 / Another Machine on LAN)
 In another terminal or another computer connected to the same WiFi:
 ```bash
-mux join ws://localhost:7331 --project my-project --user Bob
+mux join ws://localhost:7331 --project my-project --user Bob --agent claude
 ```
 *(On another machine, replace `localhost` with the host machine's LAN IP, e.g., `ws://192.168.1.50:7331`)*.
 
@@ -236,12 +237,37 @@ curl http://localhost:7331/health
 
 ---
 
+## 🤖 Multi-Agent Coordination (`agy`, `codex`, `claude`)
+
+`mux` natively supports multiple AI coding agents within the same collaborative workspace:
+
+* **Antigravity CLI (`agy`)**: Google's autonomous agentic coding assistant.
+* **OpenAI Codex (`codex`)**: Codex CLI execution adapter.
+* **Claude Code (`claude`)**: Anthropic's Claude Code CLI.
+
+### Prompt Routing & Targeting
+
+| Action | Syntax | Example |
+| :--- | :--- | :--- |
+| **Active Agent** | `> <instruction>` | `> inspect packages/database and run migrations` |
+| **Target Claude** | `> @claude <instruction>` | `> @claude refactor auth module with async/await` |
+| **Target Codex** | `> @codex <instruction>` | `> @codex generate comprehensive unit tests` |
+| **Target Agy** | `> @agy <instruction>` | `> @agy analyze system performance and bottlenecks` |
+| **Switch Active Agent** | `/agent use <provider>` | `/agent use claude` |
+| **List Available Agents** | `/agent list` or `/agents` | `/agent list` |
+
+---
+
 ## ⌨️ TUI Commands & Hotkeys
 
 Inside the interactive terminal prompt:
 
 | Command | Description | Example |
 | :--- | :--- | :--- |
+| `> <prompt>` | Dispatches an instruction to the active coding agent | `> check lint errors` |
+| `> @<provider> <prompt>` | Routes directly to specific agent (`claude`, `codex`, `agy`) | `> @claude review pull request` |
+| `/agent use <provider>` | Switches default active agent provider | `/agent use claude` |
+| `/agent list` | Shows all registered agents and local installation status | `/agent list` |
 | `<text>` + `Enter` | Broadcasts a chat message to `#general` | `Hi everyone!` |
 | `/msg @<user> <text>` | Sends a private direct message to a teammate | `/msg @Alice please check line 40` |
 | `/clear` | Clears the local terminal event view | `/clear` |
@@ -258,18 +284,20 @@ Every commit to `mux` is covered by strict typechecking and automated integratio
 # Run strict TypeScript check across all packages
 pnpm typecheck
 
-# Run Vitest test suite (protocol schemas, SQLite, and multiplayer integration)
+# Run Vitest test suite (protocol schemas, SQLite, multi-agent, and multiplayer integration)
 pnpm test
 ```
 
 Test results:
 ```text
- ✓ tests/database.test.ts   (4 tests)
- ✓ tests/protocol.test.ts   (5 tests)
- ✓ tests/multiplayer.test.ts (1 test)
+ ✓ tests/database.test.ts    (4 tests)
+ ✓ tests/multi_agent.test.ts (5 tests)
+ ✓ tests/multiplayer.test.ts (2 tests)
+ ✓ tests/protocol.test.ts    (5 tests)
+ ✓ tests/agent.test.ts       (2 tests)
 
-Test Files  3 passed (3)
-Tests       10 passed (10)
+Test Files  5 passed (5)
+Tests       18 passed (18)
 ```
 
 ---
@@ -277,15 +305,14 @@ Tests       10 passed (10)
 ## 🗺 MVP Roadmap
 
 - [x] **Phase 1 — Skeleton & Core Relay**: Monorepo, shared Zod protocol, SQLite persistence, WebSocket hub, interactive Ink TUI, multi-client test.
-- [ ] **Phase 2 — Realtime Collaboration**: Channels (`#general`, `#backend`), rich presence (`idle`, `working`, `offline`), `/events` audit stream.
-- [ ] **Phase 3 — Task Coordination**: Task creation, claiming, progress states, and live broadcast.
-- [ ] **Phase 4 — Git State Awareness**: Branch detection, commit notifications (`git.commit.created`), dirty state tracking.
-- [ ] **Phase 5 — Generic Agent Core**: Provider-independent `AgentAdapter`, `AgentRegistry`, lifecycle hooks.
-- [ ] **Phase 6 — Codex & CLI Agent Integration**: Programmatic agent runner, output streaming, prompt injection.
-- [ ] **Phase 7 — Team MCP Tools**: Local Model Context Protocol server exposing `team.*` tool calls.
-- [ ] **Phase 8 — Structured Handoff**: End-to-end task and branch handoff between agents.
-- [ ] **Phase 9 — Soft File Reservations**: Warning signals when agents touch overlapping source files.
-- [ ] **Phase 10 — mDNS LAN Discovery**: Zero-config network discovery (`mux discover`).
+- [x] **Phase 2 — Multi-Agent Coordination**: Provider-agnostic `AgentAdapter`, `AgentRegistry`, `agy` / `codex` / `claude` support, prompt routing (`@agent`), and LAN presence.
+- [ ] **Phase 3 — Realtime Channels & Audit Stream**: Dedicated channels (`#general`, `#backend`), `/events` audit stream.
+- [ ] **Phase 4 — Task Coordination**: Task creation, claiming, progress states, and live broadcast.
+- [ ] **Phase 5 — Git State Awareness**: Branch detection, commit notifications (`git.commit.created`), dirty state tracking.
+- [ ] **Phase 6 — Team MCP Tools**: Local Model Context Protocol server exposing `team.*` tool calls.
+- [ ] **Phase 7 — Structured Handoff**: End-to-end task and branch handoff between agents.
+- [ ] **Phase 8 — Soft File Reservations**: Warning signals when agents touch overlapping source files.
+- [ ] **Phase 9 — mDNS LAN Discovery**: Zero-config network discovery (`mux discover`).
 
 ---
 

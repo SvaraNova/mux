@@ -116,4 +116,74 @@ describe("Multiplayer Local Relay", () => {
     // Cleanup Alice
     clientA.disconnect();
   });
+
+  it("broadcasts agent registration and agent status updates across clients", async () => {
+    const workspaceName = "agent-relay-room";
+
+    const client1 = new RelayClient({
+      url: relayUrl,
+      workspace: workspaceName,
+      user: { id: "u-dev1", name: "Dev1" },
+      autoReconnect: false,
+    });
+
+    const client2 = new RelayClient({
+      url: relayUrl,
+      workspace: workspaceName,
+      user: { id: "u-dev2", name: "Dev2" },
+      autoReconnect: false,
+    });
+
+    await new Promise<void>((resolve) => {
+      client1.once("welcome", () => resolve());
+      client1.connect();
+    });
+
+    await new Promise<void>((resolve) => {
+      client2.once("welcome", () => resolve());
+      client2.connect();
+    });
+
+    // Client 2 listens for Dev1's agent registration
+    const agentRegisteredPromise = new Promise<RelayEvent>((resolve) => {
+      client2.on("event", (evt) => {
+        if (evt.type === "agent.registered") {
+          resolve(evt);
+        }
+      });
+    });
+
+    // Client 1 registers an agent
+    client1.registerAgent({
+      id: "ag-claude-test",
+      name: "Claude Code",
+      provider: "claude",
+      ownerId: "u-dev1",
+      status: "idle",
+      currentTask: null,
+    });
+
+    const regEvent = await agentRegisteredPromise;
+    expect(regEvent.payload.provider).toBe("claude");
+    expect(regEvent.payload.ownerId).toBe("u-dev1");
+
+    // Client 2 listens for Dev1's agent status change
+    const agentStatusPromise = new Promise<RelayEvent>((resolve) => {
+      client2.on("event", (evt) => {
+        if (evt.type === "agent.status") {
+          resolve(evt);
+        }
+      });
+    });
+
+    // Client 1 updates agent status to working
+    client1.sendAgentStatus("ag-claude-test", "working", "Refactoring compiler");
+
+    const statusEvent = await agentStatusPromise;
+    expect(statusEvent.payload.status).toBe("working");
+    expect(statusEvent.payload.task).toBe("Refactoring compiler");
+
+    client1.disconnect();
+    client2.disconnect();
+  });
 });

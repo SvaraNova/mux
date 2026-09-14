@@ -13,12 +13,12 @@ export const UserList: React.FC<UserListProps> = ({ users, currentUserId }) => {
       borderStyle="single"
       borderColor="gray"
       flexDirection="column"
-      width={24}
+      width={28}
       paddingX={1}
     >
       <Box marginBottom={1}>
         <Text bold underline color="yellow">
-          TEAM ({users.length})
+          TEAM & AGENTS ({users.length})
         </Text>
       </Box>
       {users.length === 0 ? (
@@ -27,16 +27,37 @@ export const UserList: React.FC<UserListProps> = ({ users, currentUserId }) => {
         users.map((u) => {
           const isMe = u.id === currentUserId;
           return (
-            <Box key={u.id} flexDirection="row" justifyContent="space-between">
-              <Box>
-                <Text color={u.isOnline ? "green" : "gray"}>
-                  {u.isOnline ? "● " : "○ "}
-                </Text>
-                <Text color={isMe ? "cyan" : "white"} bold={isMe}>
-                  {u.name}
-                </Text>
+            <Box key={u.id} flexDirection="column" marginBottom={u.agent ? 1 : 0}>
+              <Box flexDirection="row" justifyContent="space-between">
+                <Box>
+                  <Text color={u.isOnline ? "green" : "gray"}>
+                    {u.isOnline ? "● " : "○ "}
+                  </Text>
+                  <Text color={isMe ? "cyan" : "white"} bold={isMe}>
+                    {u.name}
+                  </Text>
+                </Box>
+                {isMe && <Text color="gray">(you)</Text>}
               </Box>
-              {isMe && <Text color="gray">(you)</Text>}
+
+              {u.agent && (
+                <Box paddingLeft={2} flexDirection="row">
+                  <Text color="magenta">└ 🤖 {u.agent.provider} </Text>
+                  <Text
+                    color={
+                      u.agent.status === "working"
+                        ? "yellow"
+                        : u.agent.status === "idle"
+                        ? "green"
+                        : u.agent.status === "error"
+                        ? "red"
+                        : "gray"
+                    }
+                  >
+                    ({u.agent.status})
+                  </Text>
+                </Box>
+              )}
             </Box>
           );
         })

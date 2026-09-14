@@ -49,6 +49,12 @@ export class EventDispatcher {
         case "client.leave":
           this.handleLeave(conn, message.reason);
           break;
+        case "client.register_agent":
+          this.handleRegisterAgent(conn, message);
+          break;
+        case "client.agent_status":
+          this.handleAgentStatus(conn, message);
+          break;
       }
     } catch (err: any) {
       console.error("Error in dispatcher.handleMessage:", err);
@@ -94,12 +100,25 @@ export class EventDispatcher {
 
     // List active users
     const allUsers = this.db.users.listByWorkspace(workspace.id);
-    const activeUsers = allUsers.map((u) => ({
-      id: u.id,
-      name: u.name,
-      isOnline: u.is_online === 1,
-      lastSeenAt: u.last_seen_at,
-    }));
+    const activeUsers = allUsers.map((u) => {
+      const agentRow = this.db.agents.findByUserId(u.id);
+      return {
+        id: u.id,
+        name: u.name,
+        isOnline: u.is_online === 1,
+        lastSeenAt: u.last_seen_at,
+        agent: agentRow
+          ? {
+              id: agentRow.id,
+              name: agentRow.name,
+              provider: agentRow.provider,
+              ownerId: agentRow.user_id,
+              status: agentRow.status as "idle" | "working" | "error" | "offline",
+              currentTask: agentRow.current_task,
+            }
+          : undefined,
+      };
+    });
 
     // List recent events
     const recentEvents = this.db.events.listRecent(workspace.id, 50);
@@ -256,6 +275,95 @@ export class EventDispatcher {
       { type: "server.event", event: leaveEvent },
       conn.socketId
     );
+  }
+
+  private handleRegisterAgent(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.register_agent" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) {
+      this.sendError(conn, "UNAUTHENTICATED", "Must join a workspace before registering an agent");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    this.db.agents.upsert({
+      id: message.agent.id,
+      workspaceId: conn.workspaceId,
+      userId: conn.userId,
+      name: message.agent.name,
+      provider: message.agent.provider,
+      status: message.agent.status,
+      currentTask: message.agent.currentTask || null,
+      timestamp,
+    });
+
+    const agentEvent: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "agent.registered",
+      projectId: conn.workspaceId,
+      sender: {
+        type: "agent",
+        id: message.agent.id,
+        name: message.agent.name,
+      },
+      timestamp,
+      payload: {
+        agentId: message.agent.id,
+        name: message.agent.name,
+        provider: message.agent.provider,
+        ownerId: conn.userId,
+        status: message.agent.status,
+        currentTask: message.agent.currentTask || null,
+      },
+    };
+
+    this.db.events.save(agentEvent);
+    this.connections.broadcastToWorkspace(conn.workspaceId, {
+      type: "server.event",
+      event: agentEvent,
+    });
+  }
+
+  private handleAgentStatus(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.agent_status" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) {
+      this.sendError(conn, "UNAUTHENTICATED", "Must join a workspace before updating agent status");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    this.db.agents.updateStatus(message.agentId, message.status, message.task || null, timestamp);
+
+    const agent = this.db.agents.findById(message.agentId);
+
+    const statusEvent: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "agent.status",
+      projectId: conn.workspaceId,
+      sender: {
+        type: "agent",
+        id: message.agentId,
+        name: agent ? agent.name : message.agentId,
+      },
+      timestamp,
+      payload: {
+        agentId: message.agentId,
+        name: agent ? agent.name : message.agentId,
+        provider: agent ? agent.provider : "unknown",
+        ownerId: conn.userId,
+        status: message.status,
+        task: message.task || null,
+      },
+    };
+
+    this.db.events.save(statusEvent);
+    this.connections.broadcastToWorkspace(conn.workspaceId, {
+      type: "server.event",
+      event: statusEvent,
+    });
   }
 
   private sendError(conn: ClientConnection, code: string, message: string): void {

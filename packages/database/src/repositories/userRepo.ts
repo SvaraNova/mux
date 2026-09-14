@@ -12,7 +12,8 @@ export interface UserRow {
 export class UserRepository {
   constructor(private db: Database.Database) {}
 
-  upsert(user: { id: string; workspaceId: string; name: string; isOnline: boolean; timestamp: string }): UserRow {
+  upsert(user: { id: string; workspaceId: string; name: string; isOnline: boolean; timestamp?: string }): UserRow {
+    const ts = user.timestamp || new Date().toISOString();
     const stmt = this.db.prepare(
       `INSERT INTO users (id, workspace_id, name, is_online, last_seen_at, created_at)
        VALUES (@id, @workspace_id, @name, @is_online, @last_seen_at, @created_at)
@@ -27,8 +28,8 @@ export class UserRepository {
       workspace_id: user.workspaceId,
       name: user.name,
       is_online: user.isOnline ? 1 : 0,
-      last_seen_at: user.timestamp,
-      created_at: user.timestamp,
+      last_seen_at: ts,
+      created_at: ts,
     });
 
     return this.findById(user.id)!;

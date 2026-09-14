@@ -123,6 +123,33 @@ export class RelayClient extends EventEmitter {
     });
   }
 
+  registerAgent(agent: {
+    id: string;
+    name: string;
+    provider: string;
+    ownerId: string;
+    status: "idle" | "working" | "error" | "offline";
+    currentTask?: string | null;
+  }): void {
+    this.send({
+      type: "client.register_agent",
+      agent,
+    });
+  }
+
+  sendAgentStatus(
+    agentId: string,
+    status: "idle" | "working" | "error" | "offline",
+    task?: string | null
+  ): void {
+    this.send({
+      type: "client.agent_status",
+      agentId,
+      status,
+      task: task || null,
+    });
+  }
+
   private startHeartbeat(): void {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {

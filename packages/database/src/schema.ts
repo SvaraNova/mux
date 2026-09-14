@@ -53,7 +53,21 @@ CREATE TABLE IF NOT EXISTS messages (
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
 );
 
+CREATE TABLE IF NOT EXISTS agents (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'idle',
+  current_task TEXT,
+  last_active_at TEXT NOT NULL,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_workspace ON users(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_agents_workspace ON agents(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_events_workspace ON events(workspace_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_messages_workspace ON messages(workspace_id, created_at);
 `;

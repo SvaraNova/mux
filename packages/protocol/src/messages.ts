@@ -37,11 +37,40 @@ export const ClientLeaveMessageSchema = z.object({
 
 export type ClientLeaveMessage = z.infer<typeof ClientLeaveMessageSchema>;
 
+export const ActiveAgentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  ownerId: z.string().min(1),
+  status: z.enum(["idle", "working", "error", "offline"]),
+  currentTask: z.string().nullable().optional(),
+});
+
+export type ActiveAgent = z.infer<typeof ActiveAgentSchema>;
+
+export const ClientRegisterAgentMessageSchema = z.object({
+  type: z.literal("client.register_agent"),
+  agent: ActiveAgentSchema,
+});
+
+export type ClientRegisterAgentMessage = z.infer<typeof ClientRegisterAgentMessageSchema>;
+
+export const ClientAgentStatusMessageSchema = z.object({
+  type: z.literal("client.agent_status"),
+  agentId: z.string().min(1),
+  status: z.enum(["idle", "working", "error", "offline"]),
+  task: z.string().nullable().optional(),
+});
+
+export type ClientAgentStatusMessage = z.infer<typeof ClientAgentStatusMessageSchema>;
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientJoinMessageSchema,
   ClientSendMessageSchema,
   ClientHeartbeatMessageSchema,
   ClientLeaveMessageSchema,
+  ClientRegisterAgentMessageSchema,
+  ClientAgentStatusMessageSchema,
 ]);
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
@@ -52,6 +81,7 @@ export const ActiveUserSchema = z.object({
   name: z.string().min(1),
   isOnline: z.boolean(),
   lastSeenAt: z.string(),
+  agent: ActiveAgentSchema.optional(),
 });
 
 export type ActiveUser = z.infer<typeof ActiveUserSchema>;

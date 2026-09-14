@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Box, Text } from "ink";
+import React, { useEffect, useState, useMemo } from "react";
+import { Box } from "ink";
 import crypto from "node:crypto";
 import type { RelayClient } from "../client/RelayClient.js";
 import type { ActiveUser, RelayEvent } from "@mux/protocol";
@@ -10,10 +10,12 @@ import { InputBar } from "./components/InputBar.js";
 import { Banner } from "./components/Banner.js";
 import { AgentTerminal } from "./components/AgentTerminal.js";
 import {
-  AgyProcessAdapter,
+  AgentRegistry,
+  type AgentInfo,
   type AgentLogLine,
+  type AgentProvider,
   type AgentStatus,
-} from "../agent/AgyProcessAdapter.js";
+} from "../agent/index.js";
 
 interface AppProps {
   client: RelayClient;
@@ -22,6 +24,7 @@ interface AppProps {
   userId: string;
   relayUrl: string;
   targetDir?: string;
+  initialProvider?: AgentProvider;
   onExit?: () => void;
 }
 
@@ -32,6 +35,7 @@ export const App: React.FC<AppProps> = ({
   userId,
   relayUrl,
   targetDir,
+  initialProvider = "agy",
   onExit,
 }) => {
   const resolvedTargetDir = targetDir || process.cwd();
@@ -40,43 +44,101 @@ export const App: React.FC<AppProps> = ({
   const [users, setUsers] = useState<ActiveUser[]>([]);
   const [events, setEvents] = useState<RelayEvent[]>([]);
   const [agentLogs, setAgentLogs] = useState<AgentLogLine[]>([]);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>("idle");
-  const [currentTask, setCurrentTask] = useState<string | null>(null);
-  const [agentAdapter] = useState(
-    () => new AgyProcessAdapter({ targetDir: resolvedTargetDir })
-  );
+  const [activeProvider, setActiveProvider] = useState<AgentProvider>(initialProvider);
 
+  const registry = useMemo(() => {
+    return new AgentRegistry({
+      targetDir: resolvedTargetDir,
+      defaultProvider: initialProvider,
+      ownerId: userId,
+    });
+  }, [resolvedTargetDir, initialProvider, userId]);
+
+  const [agentList, setAgentList] = useState<AgentInfo[]>(() => registry.list());
+
+  const activeAdapter = registry.getActive();
+  const [currentStatus, setCurrentStatus] = useState<AgentStatus>(activeAdapter.status);
+  const [currentTask, setCurrentTask] = useState<string | null>(activeAdapter.currentTask);
+
+  // Sync active agent registration over LAN relay
+  useEffect(() => {
+    if (connected) {
+      const active = registry.getActive();
+      client.registerAgent({
+        id: active.id,
+        name: active.name,
+        provider: active.provider,
+        ownerId: userId,
+        status: active.status,
+        currentTask: active.currentTask,
+      });
+    }
+  }, [connected, activeProvider, registry, client, userId]);
+
+  // Hook up agent registry events
   useEffect(() => {
     const handleLog = (log: AgentLogLine) => {
       setAgentLogs((prev) => [...prev, log]);
     };
 
-    const handleAgentStatus = ({
-      status,
-      task,
-    }: {
+    const handleStatus = (payload: {
       status: AgentStatus;
       task: string | null;
+      provider: AgentProvider;
+      agentId: string;
+      name: string;
     }) => {
-      setAgentStatus(status);
-      setCurrentTask(task);
-      if (status === "working" && task) {
-        client.sendMessage(`🤖 [agy is working on]: ${task}`, "general");
-      } else if (status === "idle") {
-        client.sendMessage(`🤖 [agy finished task]`, "general");
+      setAgentList(registry.list());
+
+      if (payload.provider === registry.activeProvider) {
+        setCurrentStatus(payload.status);
+        setCurrentTask(payload.task);
+      }
+
+      // Notify relay server
+      if (client.isConnected()) {
+        client.sendAgentStatus(payload.agentId, payload.status, payload.task);
+
+        if (payload.status === "working" && payload.task) {
+          client.sendMessage(`🤖 [${payload.provider} is working on]: ${payload.task}`, "general");
+        } else if (payload.status === "idle") {
+          client.sendMessage(`🤖 [${payload.provider} finished task]`, "general");
+        }
       }
     };
 
-    agentAdapter.on("log", handleLog);
-    agentAdapter.on("status", handleAgentStatus);
+    const handleActiveChange = (provider: AgentProvider) => {
+      setActiveProvider(provider);
+      setAgentList(registry.list());
+      const active = registry.getActive();
+      setCurrentStatus(active.status);
+      setCurrentTask(active.currentTask);
+
+      if (client.isConnected()) {
+        client.registerAgent({
+          id: active.id,
+          name: active.name,
+          provider: active.provider,
+          ownerId: userId,
+          status: active.status,
+          currentTask: active.currentTask,
+        });
+      }
+    };
+
+    registry.on("log", handleLog);
+    registry.on("status", handleStatus);
+    registry.on("active_change", handleActiveChange);
 
     return () => {
-      agentAdapter.off("log", handleLog);
-      agentAdapter.off("status", handleAgentStatus);
-      agentAdapter.stop();
+      registry.off("log", handleLog);
+      registry.off("status", handleStatus);
+      registry.off("active_change", handleActiveChange);
+      registry.stopAll();
     };
-  }, [agentAdapter, client]);
+  }, [registry, client, userId]);
 
+  // Relay WebSocket connection and events
   useEffect(() => {
     const handleConnect = () => {
       setConnected(true);
@@ -123,6 +185,45 @@ export const App: React.FC<AppProps> = ({
         if (leftUserId) {
           setUsers((prev) =>
             prev.map((u) => (u.id === leftUserId ? { ...u, isOnline: false } : u))
+          );
+        }
+      } else if (event.type === "agent.registered") {
+        const payload = event.payload;
+        if (payload?.ownerId) {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === payload.ownerId
+                ? {
+                    ...u,
+                    agent: {
+                      id: payload.agentId,
+                      name: payload.name,
+                      provider: payload.provider,
+                      ownerId: payload.ownerId,
+                      status: payload.status,
+                      currentTask: payload.currentTask,
+                    },
+                  }
+                : u
+            )
+          );
+        }
+      } else if (event.type === "agent.status") {
+        const payload = event.payload;
+        if (payload?.ownerId) {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === payload.ownerId && u.agent
+                ? {
+                    ...u,
+                    agent: {
+                      ...u.agent,
+                      status: payload.status,
+                      currentTask: payload.task,
+                    },
+                  }
+                : u
+            )
           );
         }
       }
@@ -175,17 +276,94 @@ export const App: React.FC<AppProps> = ({
           payload: {
             level: "info",
             message:
-              "AI Agent: > <prompt> (e.g. > check repo) │ Team Chat: <message> or /msg @<user> <text> │ System: /clear, /help, /quit",
+              "AI Agent: > <task> (active) │ > @claude <task> │ > @codex <task> │ > @agy <task> │ /agent use <provider> │ /agent list │ /clear │ /help │ /quit",
           },
         };
         setEvents((prev) => [...prev, helpEvent]);
         return;
       }
 
-      if (cmd === "/agent" || cmd === "/ai") {
+      if (cmd === "/agent" || cmd === "/ai" || cmd === "/agents") {
+        const sub = parts[1];
+        if (sub === "list" || cmd === "/agents") {
+          const agents = registry.list();
+          const listStr = agents
+            .map(
+              (a) =>
+                `${a.isActive ? "★ " : "  "}${a.provider}: ${a.name} [${a.status}] ${
+                  a.isAvailable ? "(installed)" : "(not found in PATH)"
+                }`
+            )
+            .join(" │ ");
+          const listEvent: RelayEvent = {
+            id: crypto.randomUUID(),
+            type: "system.event",
+            projectId: projectName,
+            sender: { type: "system", id: "client" },
+            timestamp: new Date().toISOString(),
+            payload: {
+              level: "info",
+              message: `Agents: ${listStr}`,
+            },
+          };
+          setEvents((prev) => [...prev, listEvent]);
+          return;
+        }
+
+        if (sub === "use" || sub === "switch") {
+          const provider = parts[2]?.toLowerCase();
+          if (!provider) {
+            const warnEvent: RelayEvent = {
+              id: crypto.randomUUID(),
+              type: "system.event",
+              projectId: projectName,
+              sender: { type: "system", id: "client" },
+              timestamp: new Date().toISOString(),
+              payload: {
+                level: "warn",
+                message: "Usage: /agent use <agy | codex | claude>",
+              },
+            };
+            setEvents((prev) => [...prev, warnEvent]);
+            return;
+          }
+
+          const success = registry.setActive(provider);
+          if (success) {
+            const infoEvent: RelayEvent = {
+              id: crypto.randomUUID(),
+              type: "system.event",
+              projectId: projectName,
+              sender: { type: "system", id: "client" },
+              timestamp: new Date().toISOString(),
+              payload: {
+                level: "info",
+                message: `Switched active agent provider to "${provider}".`,
+              },
+            };
+            setEvents((prev) => [...prev, infoEvent]);
+          } else {
+            const warnEvent: RelayEvent = {
+              id: crypto.randomUUID(),
+              type: "system.event",
+              projectId: projectName,
+              sender: { type: "system", id: "client" },
+              timestamp: new Date().toISOString(),
+              payload: {
+                level: "warn",
+                message: `Unknown agent provider "${provider}". Available: agy, codex, claude`,
+              },
+            };
+            setEvents((prev) => [...prev, warnEvent]);
+          }
+          return;
+        }
+
+        // Direct instruction via /agent <prompt>
         const prompt = parts.slice(1).join(" ").trim();
         if (prompt) {
-          agentAdapter.send(prompt);
+          const { adapter, cleanPrompt } = registry.routePrompt(prompt);
+          adapter.send(cleanPrompt);
         } else {
           const warnEvent: RelayEvent = {
             id: crypto.randomUUID(),
@@ -195,7 +373,7 @@ export const App: React.FC<AppProps> = ({
             timestamp: new Date().toISOString(),
             payload: {
               level: "warn",
-              message: "Usage: /agent <instruction> or > <instruction>",
+              message: "Usage: /agent <task>, /agent use <provider>, or > <task>",
             },
           };
           setEvents((prev) => [...prev, warnEvent]);
@@ -250,9 +428,10 @@ export const App: React.FC<AppProps> = ({
 
     // Direct agent instruction via '>'
     if (input.startsWith(">")) {
-      const prompt = input.slice(1).trim();
-      if (prompt) {
-        agentAdapter.send(prompt);
+      const rawPrompt = input.slice(1).trim();
+      if (rawPrompt) {
+        const { adapter, cleanPrompt } = registry.routePrompt(rawPrompt);
+        adapter.send(cleanPrompt);
       }
       return;
     }
@@ -279,9 +458,10 @@ export const App: React.FC<AppProps> = ({
 
       <AgentTerminal
         logs={agentLogs}
-        status={agentStatus}
+        status={currentStatus}
         currentTask={currentTask}
-        agentName="agy"
+        activeProvider={activeProvider}
+        agents={agentList}
         targetDir={resolvedTargetDir}
       />
 

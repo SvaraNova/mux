@@ -39,6 +39,7 @@ program
   .option("--host <host>", "Host address to bind to", "0.0.0.0")
   .option("--project <name>", "Workspace project name (default: folder name)")
   .option("-u, --user <name>", "Your display name", os.userInfo().username || "developer")
+  .option("-a, --agent <provider>", "Default AI agent provider (agy, codex, claude)", "agy")
   .option("--dir <path>", "Target project directory")
   .option("--db <path>", "Path to SQLite database")
   .action(async (dirArg, options) => {
@@ -48,6 +49,7 @@ program
     const userName = options.user;
     const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
     const dbPath = options.db || path.join(targetDir, ".mux", "relay.db");
+    const initialProvider = options.agent || "agy";
 
     console.log(`Starting mux workspace "${projectName}" in ${targetDir} on port ${port}...`);
 
@@ -85,6 +87,7 @@ program
         userId,
         relayUrl,
         targetDir,
+        initialProvider,
         onExit: async () => {
           if (relayInstance) {
             await relayInstance.close();
@@ -106,6 +109,7 @@ program
   .description("Join an existing mux workspace relay")
   .option("--project <name>", "Workspace project name (default: folder name)")
   .option("-u, --user <name>", "Your display name", os.userInfo().username || "developer")
+  .option("-a, --agent <provider>", "Default AI agent provider (agy, codex, claude)", "agy")
   .option("--dir <path>", "Target project directory")
   .option("-c, --code <code>", "Workspace join code")
   .action(async (url, dirArg, options) => {
@@ -113,6 +117,7 @@ program
     const projectName = options.project || path.basename(targetDir) || "mux";
     const userName = options.user;
     const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
+    const initialProvider = options.agent || "agy";
 
     const client = new RelayClient({
       url,
@@ -132,6 +137,7 @@ program
         userId,
         relayUrl: url,
         targetDir,
+        initialProvider,
         onExit: () => {
           process.exit(0);
         },

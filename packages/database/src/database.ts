@@ -4,6 +4,7 @@ import { WorkspaceRepository } from "./repositories/workspaceRepo.js";
 import { UserRepository } from "./repositories/userRepo.js";
 import { EventRepository } from "./repositories/eventRepo.js";
 import { MessageRepository } from "./repositories/messageRepo.js";
+import { AgentRepository } from "./repositories/agentRepo.js";
 
 export class MuxDatabase {
   public readonly db: Database.Database;
@@ -11,6 +12,7 @@ export class MuxDatabase {
   public readonly users: UserRepository;
   public readonly events: EventRepository;
   public readonly messages: MessageRepository;
+  public readonly agents: AgentRepository;
 
   constructor(dbPath: string = ":memory:") {
     this.db = new Database(dbPath);
@@ -25,6 +27,7 @@ export class MuxDatabase {
     this.users = new UserRepository(this.db);
     this.events = new EventRepository(this.db);
     this.messages = new MessageRepository(this.db);
+    this.agents = new AgentRepository(this.db);
   }
 
   private initSchema(): void {

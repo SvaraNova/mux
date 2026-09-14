@@ -55,6 +55,28 @@ export const SystemEventPayloadSchema = z.object({
 
 export type SystemEventPayload = z.infer<typeof SystemEventPayloadSchema>;
 
+export const AgentRegisteredPayloadSchema = z.object({
+  agentId: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  ownerId: z.string().min(1),
+  status: z.enum(["idle", "working", "error", "offline"]),
+  currentTask: z.string().nullable().optional(),
+});
+
+export type AgentRegisteredPayload = z.infer<typeof AgentRegisteredPayloadSchema>;
+
+export const AgentStatusPayloadSchema = z.object({
+  agentId: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  ownerId: z.string().min(1),
+  status: z.enum(["idle", "working", "error", "offline"]),
+  task: z.string().nullable().optional(),
+});
+
+export type AgentStatusPayload = z.infer<typeof AgentStatusPayloadSchema>;
+
 export const RelayEventSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),

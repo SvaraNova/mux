@@ -64,6 +64,24 @@ export const ClientAgentStatusMessageSchema = z.object({
 
 export type ClientAgentStatusMessage = z.infer<typeof ClientAgentStatusMessageSchema>;
 
+export const ClientAgentAskMessageSchema = z.object({
+  type: z.literal("client.agent_ask"),
+  requestId: z.string().min(1),
+  targetAgentName: z.string().min(1),
+  question: z.string().min(1),
+});
+
+export type ClientAgentAskMessage = z.infer<typeof ClientAgentAskMessageSchema>;
+
+export const ClientAgentReplyMessageSchema = z.object({
+  type: z.literal("client.agent_reply"),
+  requestId: z.string().min(1),
+  toAgentId: z.string().min(1),
+  reply: z.string().min(1),
+});
+
+export type ClientAgentReplyMessage = z.infer<typeof ClientAgentReplyMessageSchema>;
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientJoinMessageSchema,
   ClientSendMessageSchema,
@@ -71,6 +89,8 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientLeaveMessageSchema,
   ClientRegisterAgentMessageSchema,
   ClientAgentStatusMessageSchema,
+  ClientAgentAskMessageSchema,
+  ClientAgentReplyMessageSchema,
 ]);
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;

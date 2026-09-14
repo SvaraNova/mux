@@ -56,6 +56,12 @@ export class EventDispatcher {
         case "client.agent_status":
           this.handleAgentStatus(conn, message);
           break;
+        case "client.agent_ask":
+          this.handleAgentAsk(conn, message);
+          break;
+        case "client.agent_reply":
+          this.handleAgentReply(conn, message);
+          break;
       }
     } catch (err: any) {
       console.error("Error in dispatcher.handleMessage:", err);
@@ -377,6 +383,82 @@ export class EventDispatcher {
     this.connections.broadcastToWorkspace(conn.workspaceId, {
       type: "server.event",
       event: statusEvent,
+    });
+  }
+
+  private handleAgentAsk(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.agent_ask" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) {
+      this.sendError(conn, "UNAUTHENTICATED", "Must join a workspace before asking an agent");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const askEvent: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "agent.ask",
+      projectId: conn.workspaceId,
+      sender: {
+        type: "human",
+        id: conn.userId,
+        name: conn.userName || conn.userId,
+      },
+      timestamp,
+      payload: {
+        requestId: message.requestId,
+        fromAgentId: `agent-${conn.userId}`,
+        fromAgentName: conn.userName || conn.userId,
+        targetAgentName: message.targetAgentName,
+        question: message.question,
+        ownerName: conn.userName || conn.userId,
+        timestamp,
+      },
+    };
+
+    this.db.events.save(askEvent);
+    this.connections.broadcastToWorkspace(conn.workspaceId, {
+      type: "server.event",
+      event: askEvent,
+    });
+  }
+
+  private handleAgentReply(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.agent_reply" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) {
+      this.sendError(conn, "UNAUTHENTICATED", "Must join a workspace before replying to an agent");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const replyEvent: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "agent.reply",
+      projectId: conn.workspaceId,
+      sender: {
+        type: "human",
+        id: conn.userId,
+        name: conn.userName || conn.userId,
+      },
+      timestamp,
+      payload: {
+        requestId: message.requestId,
+        fromAgentId: `agent-${conn.userId}`,
+        fromAgentName: conn.userName || conn.userId,
+        toAgentId: message.toAgentId,
+        reply: message.reply,
+        ownerName: conn.userName || conn.userId,
+        timestamp,
+      },
+    };
+
+    this.db.events.save(replyEvent);
+    this.connections.broadcastToWorkspace(conn.workspaceId, {
+      type: "server.event",
+      event: replyEvent,
     });
   }
 

@@ -150,6 +150,26 @@ export class RelayClient extends EventEmitter {
     });
   }
 
+  agentAsk(targetAgentName: string, question: string, requestId?: string): string {
+    const id = requestId || (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `req-${Date.now()}`);
+    this.send({
+      type: "client.agent_ask",
+      requestId: id,
+      targetAgentName,
+      question,
+    });
+    return id;
+  }
+
+  agentReply(toAgentId: string, reply: string, requestId: string): void {
+    this.send({
+      type: "client.agent_reply",
+      requestId,
+      toAgentId,
+      reply,
+    });
+  }
+
   private startHeartbeat(): void {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {

@@ -152,6 +152,37 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
             }
           }
 
+          if (evt.type === "agent.ask") {
+            const from = evt.payload?.fromAgentName || evt.payload?.ownerName || senderName;
+            const target = evt.payload?.targetAgentName || "all agents";
+            const question = evt.payload?.question;
+            return (
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="magenta">❓ </Text>
+                <Text color="magenta" bold>{from}</Text>
+                <Text color="gray"> asked </Text>
+                <Text color="cyan" bold>{target}</Text>
+                <Text color="gray">: </Text>
+                <Text color="yellow">"{question}"</Text>
+              </Box>
+            );
+          }
+
+          if (evt.type === "agent.reply") {
+            const from = evt.payload?.fromAgentName || evt.payload?.ownerName || senderName;
+            const reply = evt.payload?.reply;
+            return (
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="green">💬 </Text>
+                <Text color="green" bold>{from}</Text>
+                <Text color="gray"> replied: </Text>
+                <Text color="white">"{reply}"</Text>
+              </Box>
+            );
+          }
+
           if (evt.type === "system.event") {
             const level = evt.payload?.level;
             const color = level === "error" ? "red" : level === "warn" ? "yellow" : "cyan";

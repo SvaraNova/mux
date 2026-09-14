@@ -77,6 +77,28 @@ export const AgentStatusPayloadSchema = z.object({
 
 export type AgentStatusPayload = z.infer<typeof AgentStatusPayloadSchema>;
 
+export const AgentAskPayloadSchema = z.object({
+  requestId: z.string().min(1),
+  fromAgentId: z.string().min(1),
+  fromAgentName: z.string().min(1),
+  targetAgentName: z.string().min(1),
+  question: z.string().min(1),
+  timestamp: z.string(),
+});
+
+export type AgentAskPayload = z.infer<typeof AgentAskPayloadSchema>;
+
+export const AgentReplyPayloadSchema = z.object({
+  requestId: z.string().min(1),
+  fromAgentId: z.string().min(1),
+  fromAgentName: z.string().min(1),
+  toAgentId: z.string().min(1),
+  reply: z.string().min(1),
+  timestamp: z.string(),
+});
+
+export type AgentReplyPayload = z.infer<typeof AgentReplyPayloadSchema>;
+
 export const RelayEventSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),

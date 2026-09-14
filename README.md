@@ -14,7 +14,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict_Mode-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![Node: >=20](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?logo=node.js)](https://nodejs.org/)
-[![Tests: Passing](https://img.shields.io/badge/Tests-18%2F18_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
+[![Tests: Passing](https://img.shields.io/badge/Tests-22%2F22_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
 [![Saweria](https://img.shields.io/badge/Saweria-Support_Creator-FF813F.svg?logo=coffee&logoColor=white)](https://saweria.co/svaranova)
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)](#installation)
 
@@ -261,6 +261,55 @@ curl http://localhost:7331/health
 
 ---
 
+## 🪟 Split-Pane Terminal Multiplexing (`mux split`)
+
+Want a **terminal-inside-terminal** experience where you work directly in your full-featured native AI agent while seeing your team's live activity side-by-side?
+
+Run `mux` in **split-pane mode**:
+```bash
+# Host a workspace with split pane (Left: agy interactive agent, Right: mux TUI)
+mux host --split --user Alice --agent agy
+
+# Or launch split mode directly
+mux split --agent claude
+
+# Join a teammate's workspace with split panes
+mux join ws://192.168.1.50:7331 --split --user Bob --agent claude
+```
+
+* **Zero Compromises on Agent Features**: The agent pane is a **100% real interactive TTY**. You get full ANSI colors, cursor movements, real interactive prompts, tool approval confirmation (`Y/n`), and diff views.
+* **Powered by tmux**: When `tmux` is available, `mux` automatically creates a dual-pane session with mouse scrolling enabled and easy pane switching (`Ctrl+b` + arrow keys).
+* **Native Fallback**: On macOS without `tmux`, it seamlessly launches a companion terminal window side-by-side.
+
+---
+
+## 🔌 Team MCP Server (`mux mcp`)
+
+How do AI agents running on different laptops talk directly to each other? Through the **Model Context Protocol (MCP)**!
+
+`mux` acts as a LAN-wide Team MCP Server over standard I/O (JSON-RPC 2.0). Both **Antigravity (`agy`)** and **Claude Code (`claude`)** can discover and invoke collaborative tools directly.
+
+### 1-Click Auto-Installation
+```bash
+mux mcp install
+```
+This registers `mux` into:
+- Antigravity global configuration (`~/.gemini/config/mcp_config.json`)
+- Claude Code global configuration (`~/.claude.json`)
+- Project-level configuration (`.mcp.json`)
+
+### Exposed MCP Tools for Agents
+| Tool Name | What the AI Agent Does |
+| :--- | :--- |
+| `team_ask_agent` | **Ask a teammate's agent across the LAN** a question and await its response. |
+| `team_reply_agent` | **Reply to inquiries** sent by other agents or developers in the workspace. |
+| `team_send_message` | Post code snippets, reviews, or chat updates to `#general` or private DMs. |
+| `team_broadcast_status`| Announce when starting or completing a task (`working` / `idle`). |
+| `team_claim_task` | Lock a task and declare files being edited to **prevent merge conflicts**. |
+| `team_get_context` | Query who is currently online, which agents are working, and recent team messages. |
+
+---
+
 ## ⌨️ TUI Commands & Hotkeys
 
 Inside the interactive terminal prompt:
@@ -289,20 +338,21 @@ Every commit to `mux` is covered by strict typechecking and automated integratio
 # Run strict TypeScript check across all packages
 pnpm typecheck
 
-# Run Vitest test suite (protocol schemas, SQLite, multi-agent, and multiplayer integration)
+# Run Vitest test suite (protocol schemas, SQLite, multi-agent, MCP, and multiplayer integration)
 pnpm test
 ```
 
 Test results:
 ```text
- ✓ tests/database.test.ts    (4 tests)
- ✓ tests/multi_agent.test.ts (5 tests)
+ ✓ tests/mcp.test.ts         (4 tests)
  ✓ tests/multiplayer.test.ts (2 tests)
- ✓ tests/protocol.test.ts    (5 tests)
+ ✓ tests/multi_agent.test.ts (5 tests)
+ ✓ tests/database.test.ts    (4 tests)
  ✓ tests/agent.test.ts       (2 tests)
+ ✓ tests/protocol.test.ts    (5 tests)
 
-Test Files  5 passed (5)
-Tests       18 passed (18)
+Test Files  6 passed (6)
+Tests       22 passed (22)
 ```
 
 ---
@@ -314,7 +364,7 @@ Tests       18 passed (18)
 - [ ] **Phase 3 — Realtime Channels & Audit Stream**: Dedicated channels (`#general`, `#backend`), `/events` audit stream.
 - [ ] **Phase 4 — Task Coordination**: Task creation, claiming, progress states, and live broadcast.
 - [ ] **Phase 5 — Git State Awareness**: Branch detection, commit notifications (`git.commit.created`), dirty state tracking.
-- [ ] **Phase 6 — Team MCP Tools**: Local Model Context Protocol server exposing `team.*` tool calls.
+- [x] **Phase 6 — Team MCP Tools**: Local Model Context Protocol server exposing `team.*` tool calls (`team_ask_agent`, `team_reply_agent`, etc.).
 - [ ] **Phase 7 — Structured Handoff**: End-to-end task and branch handoff between agents.
 - [ ] **Phase 8 — Soft File Reservations**: Warning signals when agents touch overlapping source files.
 - [ ] **Phase 9 — mDNS LAN Discovery**: Zero-config network discovery (`mux discover`).

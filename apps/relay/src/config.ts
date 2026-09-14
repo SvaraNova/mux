@@ -12,7 +12,7 @@ export function getDefaultRelayConfig(): RelayConfig {
   const host = process.env.MUX_HOST || "0.0.0.0";
   const dbPath =
     process.env.MUX_DB_PATH ||
-    path.join(process.env.HOME || os.homedir(), ".mux", "relay.db");
+    path.join(process.cwd(), ".mux", "relay.db");
 
   return {
     port,

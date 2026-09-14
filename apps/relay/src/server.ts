@@ -22,7 +22,11 @@ export async function createRelayServer(
   partialConfig: Partial<RelayConfig> = {}
 ): Promise<RelayServerInstance> {
   const defaultConfig = getDefaultRelayConfig();
-  const config: RelayConfig = { ...defaultConfig, ...partialConfig };
+  const config: RelayConfig = {
+    port: partialConfig.port ?? defaultConfig.port,
+    host: partialConfig.host ?? defaultConfig.host,
+    dbPath: partialConfig.dbPath ?? defaultConfig.dbPath,
+  };
 
   // Ensure DB directory exists if not memory
   if (config.dbPath !== ":memory:") {

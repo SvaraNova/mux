@@ -8,6 +8,12 @@ import { UserList } from "./components/UserList.js";
 import { EventStream } from "./components/EventStream.js";
 import { InputBar } from "./components/InputBar.js";
 import { Banner } from "./components/Banner.js";
+import { AgentTerminal } from "./components/AgentTerminal.js";
+import {
+  AgyProcessAdapter,
+  type AgentLogLine,
+  type AgentStatus,
+} from "../agent/AgyProcessAdapter.js";
 
 interface AppProps {
   client: RelayClient;
@@ -15,6 +21,7 @@ interface AppProps {
   userName: string;
   userId: string;
   relayUrl: string;
+  targetDir?: string;
   onExit?: () => void;
 }
 
@@ -24,12 +31,51 @@ export const App: React.FC<AppProps> = ({
   userName,
   userId,
   relayUrl,
+  targetDir,
   onExit,
 }) => {
+  const resolvedTargetDir = targetDir || process.cwd();
   const [connected, setConnected] = useState(false);
   const [joinCode, setJoinCode] = useState<string | undefined>(undefined);
   const [users, setUsers] = useState<ActiveUser[]>([]);
   const [events, setEvents] = useState<RelayEvent[]>([]);
+  const [agentLogs, setAgentLogs] = useState<AgentLogLine[]>([]);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>("idle");
+  const [currentTask, setCurrentTask] = useState<string | null>(null);
+  const [agentAdapter] = useState(
+    () => new AgyProcessAdapter({ targetDir: resolvedTargetDir })
+  );
+
+  useEffect(() => {
+    const handleLog = (log: AgentLogLine) => {
+      setAgentLogs((prev) => [...prev, log]);
+    };
+
+    const handleAgentStatus = ({
+      status,
+      task,
+    }: {
+      status: AgentStatus;
+      task: string | null;
+    }) => {
+      setAgentStatus(status);
+      setCurrentTask(task);
+      if (status === "working" && task) {
+        client.sendMessage(`🤖 [agy is working on]: ${task}`, "general");
+      } else if (status === "idle") {
+        client.sendMessage(`🤖 [agy finished task]`, "general");
+      }
+    };
+
+    agentAdapter.on("log", handleLog);
+    agentAdapter.on("status", handleAgentStatus);
+
+    return () => {
+      agentAdapter.off("log", handleLog);
+      agentAdapter.off("status", handleAgentStatus);
+      agentAdapter.stop();
+    };
+  }, [agentAdapter, client]);
 
   useEffect(() => {
     const handleConnect = () => {
@@ -128,10 +174,32 @@ export const App: React.FC<AppProps> = ({
           timestamp: new Date().toISOString(),
           payload: {
             level: "info",
-            message: "Commands: /help, /msg @<userId> <text>, /clear, /quit",
+            message:
+              "AI Agent: > <prompt> (e.g. > check repo) │ Team Chat: <message> or /msg @<user> <text> │ System: /clear, /help, /quit",
           },
         };
         setEvents((prev) => [...prev, helpEvent]);
+        return;
+      }
+
+      if (cmd === "/agent" || cmd === "/ai") {
+        const prompt = parts.slice(1).join(" ").trim();
+        if (prompt) {
+          agentAdapter.send(prompt);
+        } else {
+          const warnEvent: RelayEvent = {
+            id: crypto.randomUUID(),
+            type: "system.event",
+            projectId: projectName,
+            sender: { type: "system", id: "client" },
+            timestamp: new Date().toISOString(),
+            payload: {
+              level: "warn",
+              message: "Usage: /agent <instruction> or > <instruction>",
+            },
+          };
+          setEvents((prev) => [...prev, warnEvent]);
+        }
         return;
       }
 
@@ -180,6 +248,15 @@ export const App: React.FC<AppProps> = ({
       return;
     }
 
+    // Direct agent instruction via '>'
+    if (input.startsWith(">")) {
+      const prompt = input.slice(1).trim();
+      if (prompt) {
+        agentAdapter.send(prompt);
+      }
+      return;
+    }
+
     // Regular channel broadcast
     client.sendMessage(input, "general");
   };
@@ -200,9 +277,17 @@ export const App: React.FC<AppProps> = ({
         relayUrl={relayUrl}
       />
 
+      <AgentTerminal
+        logs={agentLogs}
+        status={agentStatus}
+        currentTask={currentTask}
+        agentName="agy"
+        targetDir={resolvedTargetDir}
+      />
+
       <Box flexDirection="row" marginY={1}>
         <UserList users={users} currentUserId={userId} />
-        <EventStream events={events} />
+        <EventStream events={events} height={10} />
       </Box>
 
       <InputBar onSubmit={handleSubmit} onQuit={handleQuit} />

@@ -52,19 +52,19 @@ export const InputBar: React.FC<InputBarProps> = ({ onSubmit, onQuit, disabled }
   return (
     <Box
       borderStyle="round"
-      borderColor="cyan"
+      borderColor={value.startsWith(">") ? "yellow" : "cyan"}
       paddingX={1}
       flexDirection="row"
     >
-      <Text bold color="cyan">
-        &gt;{" "}
+      <Text bold color={value.startsWith(">") ? "yellow" : "cyan"}>
+        {value.startsWith(">") ? "🤖 AI > " : "💬 > "}
       </Text>
-      <Text color="white">{value}</Text>
+      <Text color={value.startsWith(">") ? "yellow" : "white"}>{value}</Text>
       <Text color="gray">█</Text>
       {value.length === 0 && (
         <Box marginLeft={2}>
           <Text color="gray">
-            (Type a message or /help, /quit - press Enter to send)
+            (Chat: text | AI Agent: &gt; prompt e.g. &gt; inspect repo | /help, /quit)
           </Text>
         </Box>
       )}

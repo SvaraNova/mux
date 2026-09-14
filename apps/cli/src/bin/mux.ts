@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import os from "node:os";
+import path from "node:path";
 import crypto from "node:crypto";
 import React from "react";
 import chalk from "chalk";
@@ -32,27 +33,30 @@ program
 
 // Command: mux host
 program
-  .command("host")
+  .command("host [dir]")
   .description("Start a local relay server and open the collaborative TUI")
   .option("-p, --port <number>", "Port to host on", "7331")
   .option("--host <host>", "Host address to bind to", "0.0.0.0")
-  .option("--project <name>", "Workspace project name", "mux")
+  .option("--project <name>", "Workspace project name (default: folder name)")
   .option("-u, --user <name>", "Your display name", os.userInfo().username || "developer")
-  .option("--db <path>", "Path to SQLite database", ":memory:")
-  .action(async (options) => {
+  .option("--dir <path>", "Target project directory")
+  .option("--db <path>", "Path to SQLite database")
+  .action(async (dirArg, options) => {
+    const targetDir = path.resolve(dirArg || options.dir || process.cwd());
     const port = parseInt(options.port, 10);
-    const projectName = options.project;
+    const projectName = options.project || path.basename(targetDir) || "mux";
     const userName = options.user;
     const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
+    const dbPath = options.db || path.join(targetDir, ".mux", "relay.db");
 
-    console.log(`Starting mux workspace "${projectName}" on port ${port}...`);
+    console.log(`Starting mux workspace "${projectName}" in ${targetDir} on port ${port}...`);
 
     let relayInstance: any = null;
     try {
       relayInstance = await createRelayServer({
         port,
         host: options.host,
-        dbPath: options.db,
+        dbPath,
       });
     } catch (err: any) {
       if (err.code === "EADDRINUSE") {
@@ -80,6 +84,7 @@ program
         userName,
         userId,
         relayUrl,
+        targetDir,
         onExit: async () => {
           if (relayInstance) {
             await relayInstance.close();
@@ -97,13 +102,15 @@ program
 
 // Command: mux join <url>
 program
-  .command("join <url>")
+  .command("join <url> [dir]")
   .description("Join an existing mux workspace relay")
-  .option("--project <name>", "Workspace project name", "mux")
+  .option("--project <name>", "Workspace project name (default: folder name)")
   .option("-u, --user <name>", "Your display name", os.userInfo().username || "developer")
+  .option("--dir <path>", "Target project directory")
   .option("-c, --code <code>", "Workspace join code")
-  .action(async (url, options) => {
-    const projectName = options.project;
+  .action(async (url, dirArg, options) => {
+    const targetDir = path.resolve(dirArg || options.dir || process.cwd());
+    const projectName = options.project || path.basename(targetDir) || "mux";
     const userName = options.user;
     const userId = `user-${userName.toLowerCase()}-${crypto.randomBytes(2).toString("hex")}`;
 
@@ -124,6 +131,7 @@ program
         userName,
         userId,
         relayUrl: url,
+        targetDir,
         onExit: () => {
           process.exit(0);
         },

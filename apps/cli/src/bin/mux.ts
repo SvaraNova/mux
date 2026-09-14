@@ -49,6 +49,7 @@ program
   .option("-a, --agent <provider>", "Default AI agent provider (agy, codex, claude)", "agy")
   .option("--agent-cmd <command>", "Custom command for agent execution in split mode")
   .option("--split", "Launch side-by-side terminal with interactive agent and collaborative TUI")
+  .option("--collab-only", "Collab-only mode: show team TUI without agent launch (set automatically in split pane)")
   .option("--dir <path>", "Target project directory")
   .option("--db <path>", "Path to SQLite database")
   .action(async (dirArg, options) => {
@@ -63,7 +64,7 @@ program
       const escapedDir = targetDir.replace(/"/g, '\\"');
       const escapedProject = projectName.replace(/"/g, '\\"');
       const escapedUser = userName.replace(/"/g, '\\"');
-      const muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"`;
+      const muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}" --collab-only`;
 
       SplitMultiplexer.launch({
         agent: initialProvider,
@@ -74,10 +75,13 @@ program
       return;
     }
 
+    const collabOnly = !!options.collabOnly;
     const userId = `user-${userName.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`;
     const dbPath = options.db || path.join(targetDir, ".mux", "relay.db");
 
-    console.log(`Starting mux workspace "${projectName}" in ${targetDir} on port ${port}...`);
+    if (!collabOnly) {
+      console.log(`Starting mux workspace "${projectName}" in ${targetDir} on port ${port}...`);
+    }
 
     let relayInstance: any = null;
     try {
@@ -88,7 +92,7 @@ program
       });
     } catch (err: any) {
       if (err.code === "EADDRINUSE") {
-        console.log(`Port ${port} is already in use. Assuming existing relay server.`);
+        if (!collabOnly) console.log(`Port ${port} is already in use. Assuming existing relay server.`);
       } else {
         console.error("Failed to start relay:", err.message);
         process.exit(1);
@@ -114,6 +118,7 @@ program
         relayUrl,
         targetDir,
         initialProvider,
+        collabOnly,
         onExit: async () => {
           if (relayInstance) {
             await relayInstance.close();

@@ -8,6 +8,7 @@ interface InputBarProps {
   onOpenTerminal?: () => void;
   activeProvider?: string;
   disabled?: boolean;
+  collabOnly?: boolean;
 }
 
 export const InputBar: React.FC<InputBarProps> = ({
@@ -17,11 +18,12 @@ export const InputBar: React.FC<InputBarProps> = ({
   onOpenTerminal,
   activeProvider = "agy",
   disabled,
+  collabOnly = false,
 }) => {
   const [value, setValue] = useState("");
   const { exit } = useApp();
 
-  const isAiMode = value.startsWith(">");
+  const isAiMode = !collabOnly && value.startsWith(">");
   const isCmdMode = value.startsWith("/");
 
   useInput((input, key) => {
@@ -91,6 +93,14 @@ export const InputBar: React.FC<InputBarProps> = ({
     modeColor = "magenta";
   }
 
+  const hintText = collabOnly
+    ? "(Type team chat message │ /msg @user text │ /help for commands)"
+    : "(Type message to chat │ > <prompt> for AI │ /help for commands)";
+
+  const shortcutText = collabOnly
+    ? "[Ctrl+b ←: switch to agent pane │ Ctrl+C: quit]"
+    : "[Ctrl+O: open real terminal │ Tab: switch agent]";
+
   return (
     <Box
       borderStyle="round"
@@ -108,14 +118,14 @@ export const InputBar: React.FC<InputBarProps> = ({
         {value.length === 0 && (
           <Box marginLeft={2}>
             <Text color="gray">
-              (Type message to chat │ &gt; &lt;prompt&gt; for AI │ /help for commands)
+              {hintText}
             </Text>
           </Box>
         )}
       </Box>
 
       <Box>
-        <Text color="gray">[Ctrl+O: open real terminal │ Tab: switch agent]</Text>
+        <Text color="gray">{shortcutText}</Text>
       </Box>
     </Box>
   );

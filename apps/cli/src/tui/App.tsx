@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Box } from "ink";
+import { Box, Text } from "ink";
 import crypto from "node:crypto";
 import type { RelayClient } from "../client/RelayClient.js";
 import type { ActiveUser, RelayEvent } from "@mux/protocol";
@@ -25,6 +25,7 @@ interface AppProps {
   relayUrl: string;
   targetDir?: string;
   initialProvider?: AgentProvider;
+  collabOnly?: boolean;
   onExit?: () => void;
 }
 
@@ -36,6 +37,7 @@ export const App: React.FC<AppProps> = ({
   relayUrl,
   targetDir,
   initialProvider = "agy",
+  collabOnly = false,
   onExit,
 }) => {
   const resolvedTargetDir = targetDir || process.cwd();
@@ -430,6 +432,21 @@ export const App: React.FC<AppProps> = ({
 
     // Direct agent instruction via '>'
     if (input.startsWith(">")) {
+      if (collabOnly) {
+        const hintEvent: RelayEvent = {
+          id: crypto.randomUUID(),
+          type: "system.event",
+          projectId: projectName,
+          sender: { type: "system", id: "client" },
+          timestamp: new Date().toISOString(),
+          payload: {
+            level: "info",
+            message: "💡 Split mode: Switch to the LEFT pane (Ctrl+b ←) to interact with your AI agent.",
+          },
+        };
+        setEvents((prev) => [...prev, hintEvent]);
+        return;
+      }
       const rawPrompt = input.slice(1).trim();
       const { adapter, cleanPrompt } = registry.routePrompt(rawPrompt);
       adapter.launchInteractive(cleanPrompt || undefined);
@@ -448,6 +465,7 @@ export const App: React.FC<AppProps> = ({
   };
 
   const handleOpenTerminal = () => {
+    if (collabOnly) return;
     const adapter = registry.getActive();
     adapter.launchInteractive();
   };
@@ -468,14 +486,52 @@ export const App: React.FC<AppProps> = ({
         relayUrl={relayUrl}
       />
 
-      <AgentTerminal
-        logs={agentLogs}
-        status={currentStatus}
-        currentTask={currentTask}
-        activeProvider={activeProvider}
-        agents={agentList}
-        targetDir={resolvedTargetDir}
-      />
+      {collabOnly ? (
+        <Box
+          borderStyle="round"
+          borderColor="cyan"
+          flexDirection="column"
+          paddingX={1}
+          marginY={1}
+          minHeight={6}
+        >
+          <Box flexDirection="row" justifyContent="space-between">
+            <Text bold color="cyan">{"🤝 TEAM COLLABORATION PANE"}</Text>
+            <Text color="green" bold>{"● SPLIT MODE"}</Text>
+          </Box>
+          <Box marginTop={1} flexDirection="column">
+            <Text color="gray">{"You are in the collaboration pane. Your AI agent runs in the LEFT pane."}</Text>
+            <Box flexDirection="row">
+              <Text color="gray">{"  • Switch to agent:  "}</Text>
+              <Text color="yellow">{"Ctrl+b ←"}</Text>
+              <Text color="gray">{"  (tmux pane nav)"}</Text>
+            </Box>
+            <Box flexDirection="row">
+              <Text color="gray">{"  • Type here to send "}</Text>
+              <Text color="cyan">{"team chat messages"}</Text>
+            </Box>
+            <Box flexDirection="row">
+              <Text color="gray">{"  • Use "}</Text>
+              <Text color="cyan">{"/msg @user text"}</Text>
+              <Text color="gray">{" for direct messages"}</Text>
+            </Box>
+            <Box flexDirection="row">
+              <Text color="gray">{"  • Use "}</Text>
+              <Text color="cyan">{"/help"}</Text>
+              <Text color="gray">{" for all available commands"}</Text>
+            </Box>
+          </Box>
+        </Box>
+      ) : (
+        <AgentTerminal
+          logs={agentLogs}
+          status={currentStatus}
+          currentTask={currentTask}
+          activeProvider={activeProvider}
+          agents={agentList}
+          targetDir={resolvedTargetDir}
+        />
+      )}
 
       <Box flexDirection="row" marginY={1}>
         <UserList users={users} currentUserId={userId} />
@@ -485,9 +541,10 @@ export const App: React.FC<AppProps> = ({
       <InputBar
         onSubmit={handleSubmit}
         onQuit={handleQuit}
-        onCycleAgent={handleCycleAgent}
-        onOpenTerminal={handleOpenTerminal}
+        onCycleAgent={!collabOnly ? handleCycleAgent : undefined}
+        onOpenTerminal={!collabOnly ? handleOpenTerminal : undefined}
         activeProvider={activeProvider}
+        collabOnly={collabOnly}
       />
     </Box>
   );

@@ -18,4 +18,11 @@ export class CodexAdapter extends BaseProcessAdapter {
   protected buildArguments(prompt: string): string[] {
     return [prompt];
   }
+
+  protected buildInteractiveArguments(prompt?: string): string[] {
+    if (prompt && prompt.trim()) {
+      return [prompt.trim()];
+    }
+    return [];
+  }
 }

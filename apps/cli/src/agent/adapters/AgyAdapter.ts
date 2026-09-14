@@ -18,4 +18,11 @@ export class AgyAdapter extends BaseProcessAdapter {
   protected buildArguments(prompt: string): string[] {
     return ["-p", prompt, "--dangerously-skip-permissions"];
   }
+
+  protected buildInteractiveArguments(prompt?: string): string[] {
+    if (prompt && prompt.trim()) {
+      return ["-i", prompt.trim()];
+    }
+    return [];
+  }
 }

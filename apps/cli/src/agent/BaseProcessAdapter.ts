@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import fs from "node:fs";
@@ -38,6 +38,7 @@ export abstract class BaseProcessAdapter extends EventEmitter implements AgentAd
 
   protected abstract getBinaryName(): string;
   protected abstract buildArguments(prompt: string): string[];
+  protected abstract buildInteractiveArguments(prompt?: string): string[];
 
   /**
    * Resolve binary executable path across standard user PATH and local bin dirs.
@@ -174,6 +175,78 @@ export abstract class BaseProcessAdapter extends EventEmitter implements AgentAd
       this.setStatus("error", null);
       this.emitLog("system", `Error spawning ${this.name}: ${err.message}`);
     }
+  }
+
+  public launchInteractive(prompt?: string): number {
+    const binaryPath = this.resolveBinary();
+    if (!binaryPath) {
+      this.setStatus("error", null);
+      this.emitLog(
+        "system",
+        `⚠ Binary "${this.getBinaryName()}" for provider "${this.provider}" not found in PATH or ~/.local/bin.`
+      );
+      this.emitLog(
+        "system",
+        `Tip: Make sure "${this.getBinaryName()}" is installed, or switch agent with /agent use <provider>.`
+      );
+      return -1;
+    }
+
+    const args = this.buildInteractiveArguments(prompt);
+    const taskName = prompt ? `"${prompt}"` : `Interactive Shell`;
+    this.setStatus("working", taskName);
+
+    const wasRaw = process.stdin.isRaw;
+    if (process.stdin.isTTY) {
+      try {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+      } catch {
+        // ignore
+      }
+    }
+
+    // Clear terminal screen before launching interactive session
+    process.stdout.write("\x1b[2J\x1b[0f");
+
+    const childEnv = {
+      ...process.env,
+      PATH: `${path.join(os.homedir(), ".local", "bin")}:${process.env.PATH || ""}`,
+    };
+
+    let exitCode = 0;
+    try {
+      const result = spawnSync(binaryPath, args, {
+        cwd: this.targetDir,
+        stdio: "inherit",
+        env: childEnv,
+      });
+      exitCode = result.status ?? 0;
+    } catch (err: any) {
+      exitCode = 1;
+      this.emitLog("system", `Failed to launch ${this.name}: ${err.message}`);
+    } finally {
+      if (process.stdin.isTTY) {
+        try {
+          process.stdin.resume();
+          if (wasRaw) {
+            process.stdin.setRawMode(true);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      process.stdout.write("\x1b[2J\x1b[0f");
+    }
+
+    this.setStatus("idle", null);
+    if (exitCode === 0) {
+      this.emitLog("system", `✓ Closed interactive ${this.name} (${this.provider}) session.`);
+    } else {
+      this.emitLog("system", `⚠ ${this.name} (${this.provider}) exited with code ${exitCode}.`);
+    }
+
+    return exitCode;
   }
 
   public stop(): void {

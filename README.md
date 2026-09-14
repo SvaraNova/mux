@@ -265,10 +265,12 @@ curl http://localhost:7331/health
 
 Inside the interactive terminal prompt:
 
-| Command | Description | Example |
+| Command / Shortcut | Description | Example |
 | :--- | :--- | :--- |
-| `> <prompt>` | Dispatches an instruction to the active coding agent | `> check lint errors` |
-| `> @<provider> <prompt>` | Routes directly to specific agent (`claude`, `codex`, `agy`) | `> @claude review pull request` |
+| `> <prompt>` | Launches the **real interactive agent terminal** with initial prompt | `> buat web app to do list` |
+| `> @<provider> <prompt>` | Launches targeted real interactive terminal (`claude`, `codex`, `agy`) | `> @claude review pull request` |
+| `<Ctrl+O>` or `/term` | Opens the real interactive agent shell directly | `<Ctrl+O>` |
+| `<Tab>` | Cycles between active agents (`agy` ➔ `codex` ➔ `claude`) | `<Tab>` |
 | `/agent use <provider>` | Switches default active agent provider | `/agent use claude` |
 | `/agent list` | Shows all registered agents and local installation status | `/agent list` |
 | `<text>` + `Enter` | Broadcasts a chat message to `#general` | `Hi everyone!` |

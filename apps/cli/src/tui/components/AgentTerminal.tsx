@@ -100,16 +100,16 @@ export const AgentTerminal: React.FC<AgentTerminalProps> = ({
       {visibleLogs.length === 0 ? (
         <Box flexDirection="column" paddingY={1}>
           <Text color="white" bold>
-            💡 AI Agents ready for commands:
+            ⚡ Real Interactive Agent Terminal:
           </Text>
           <Text color="gray">
-            {"  "}• Run with active agent:  <Text color="yellow">&gt; check repo structure</Text>
+            {"  "}• Run initial prompt:   <Text color="yellow">&gt; coba bikin web app to do list sederhana</Text>
           </Text>
           <Text color="gray">
-            {"  "}• Direct to specific agent: <Text color="yellow">&gt; @claude review PR</Text>  │  <Text color="yellow">&gt; @codex write tests</Text>
+            {"  "}• Target provider:       <Text color="yellow">&gt; @claude review PR</Text>  │  <Text color="yellow">&gt; @codex write tests</Text>
           </Text>
           <Text color="gray">
-            {"  "}• Press <Text color="cyan">&lt;Tab&gt;</Text> to switch active provider or type <Text color="cyan">/agent use &lt;provider&gt;</Text>
+            {"  "}• Open shell directly:   <Text color="cyan">&lt;Ctrl+O&gt;</Text> or type <Text color="cyan">/term</Text> (press <Text color="cyan">&lt;Tab&gt;</Text> to cycle agent)
           </Text>
         </Box>
       ) : (

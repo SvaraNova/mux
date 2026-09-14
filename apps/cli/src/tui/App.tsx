@@ -259,7 +259,7 @@ export const App: React.FC<AppProps> = ({
           payload: {
             level: "info",
             message:
-              "AI Agent: > <task> (active) │ > @claude <task> │ > @codex <task> │ > @agy <task> │ /agent use <provider> │ /agent list │ /clear │ /help │ /quit",
+              "AI Agent Terminal: > <prompt> │ /term or <Ctrl+O> │ Tab: switch agent │ Chat: <message> │ /msg @<user> <text> │ /clear │ /help │ /quit",
           },
         };
         setEvents((prev) => [...prev, helpEvent]);
@@ -364,6 +364,25 @@ export const App: React.FC<AppProps> = ({
         return;
       }
 
+      if (
+        cmd === "/term" ||
+        cmd === "/open" ||
+        cmd === "/interactive" ||
+        cmd === "/agy" ||
+        cmd === "/claude" ||
+        cmd === "/codex"
+      ) {
+        let targetProvider: AgentProvider = activeProvider;
+        if (cmd === "/agy") targetProvider = "agy";
+        if (cmd === "/claude") targetProvider = "claude";
+        if (cmd === "/codex") targetProvider = "codex";
+
+        const prompt = parts.slice(1).join(" ").trim();
+        const adapter = registry.get(targetProvider) || registry.getActive();
+        adapter.launchInteractive(prompt || undefined);
+        return;
+      }
+
       if (cmd === "/clear") {
         setEvents([]);
         return;
@@ -412,10 +431,8 @@ export const App: React.FC<AppProps> = ({
     // Direct agent instruction via '>'
     if (input.startsWith(">")) {
       const rawPrompt = input.slice(1).trim();
-      if (rawPrompt) {
-        const { adapter, cleanPrompt } = registry.routePrompt(rawPrompt);
-        adapter.send(cleanPrompt);
-      }
+      const { adapter, cleanPrompt } = registry.routePrompt(rawPrompt);
+      adapter.launchInteractive(cleanPrompt || undefined);
       return;
     }
 
@@ -428,6 +445,11 @@ export const App: React.FC<AppProps> = ({
     const idx = providers.indexOf(activeProvider);
     const nextProvider = providers[(idx + 1) % providers.length];
     registry.setActive(nextProvider);
+  };
+
+  const handleOpenTerminal = () => {
+    const adapter = registry.getActive();
+    adapter.launchInteractive();
   };
 
   const handleQuit = () => {
@@ -464,6 +486,7 @@ export const App: React.FC<AppProps> = ({
         onSubmit={handleSubmit}
         onQuit={handleQuit}
         onCycleAgent={handleCycleAgent}
+        onOpenTerminal={handleOpenTerminal}
         activeProvider={activeProvider}
       />
     </Box>

@@ -5,6 +5,7 @@ interface InputBarProps {
   onSubmit: (text: string) => void;
   onQuit: () => void;
   onCycleAgent?: () => void;
+  onOpenTerminal?: () => void;
   activeProvider?: string;
   disabled?: boolean;
 }
@@ -13,6 +14,7 @@ export const InputBar: React.FC<InputBarProps> = ({
   onSubmit,
   onQuit,
   onCycleAgent,
+  onOpenTerminal,
   activeProvider = "agy",
   disabled,
 }) => {
@@ -28,6 +30,11 @@ export const InputBar: React.FC<InputBarProps> = ({
     if (key.ctrl && input === "c") {
       onQuit();
       exit();
+      return;
+    }
+
+    if (key.ctrl && (input === "o" || input === "t") && onOpenTerminal) {
+      onOpenTerminal();
       return;
     }
 
@@ -108,7 +115,7 @@ export const InputBar: React.FC<InputBarProps> = ({
       </Box>
 
       <Box>
-        <Text color="gray">[Tab: switch agent │ Esc: clear]</Text>
+        <Text color="gray">[Ctrl+O: open real terminal │ Tab: switch agent]</Text>
       </Box>
     </Box>
   );

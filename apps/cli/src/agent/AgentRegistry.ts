@@ -106,6 +106,12 @@ export class AgentRegistry extends EventEmitter {
     };
   }
 
+  public launchInteractive(prompt?: string, provider?: AgentProvider): number {
+    const targetProvider = provider || this._activeProvider;
+    const adapter = this.adapters.get(targetProvider) || this.getActive();
+    return adapter.launchInteractive(prompt);
+  }
+
   public stopAll(): void {
     for (const adapter of this.adapters.values()) {
       adapter.stop();

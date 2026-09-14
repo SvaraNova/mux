@@ -37,5 +37,6 @@ export interface AgentAdapter extends EventEmitter {
 
   isAvailable(): boolean;
   send(prompt: string): void;
+  launchInteractive(prompt?: string): number;
   stop(): void;
 }

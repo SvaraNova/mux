@@ -80,8 +80,13 @@ program
         console.log(`Port ${port} already in use — reusing existing relay.`);
       }
 
-      // muxCommand for the right (collab) pane — connects to the relay we just started
-      const muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}" --collab-only`;
+      // Use absolute paths for node + mux script so the tmux pane doesn't
+      // need ~/.local/bin in PATH (tmux shells often have a minimal PATH).
+      const nodeBin = process.execPath;          // e.g. /usr/local/bin/node
+      const muxScript = process.argv[1];         // e.g. /Users/.../dist/bin/mux.js
+
+      // muxCommand for the right (collab) pane
+      const muxCommand = `"${nodeBin}" "${muxScript}" host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}" --collab-only`;
 
       SplitMultiplexer.launch({
         agent: initialProvider,
@@ -177,13 +182,18 @@ program
       const escapedProject = projectName.replace(/"/g, '\\"');
       const escapedUser = userName.replace(/"/g, '\\"');
       const codeArg = options.code ? ` --code "${options.code}"` : "";
-      const muxCommand = `mux join "${url}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
+      const nodeBin = process.execPath;
+      const muxScript = process.argv[1];
+      const muxCommand = `"${nodeBin}" "${muxScript}" join "${url}" --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}"${codeArg}`;
 
       SplitMultiplexer.launch({
         agent: initialProvider,
         agentCmd: options.agentCmd,
         muxCommand,
         targetDir,
+        relayUrl: url,
+        workspace: projectName,
+        userName,
       });
       return;
     }

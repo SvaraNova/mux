@@ -315,9 +315,9 @@ export class EventDispatcher {
       type: "agent.registered",
       projectId: conn.workspaceId,
       sender: {
-        type: "agent",
-        id: message.agent.id,
-        name: message.agent.name,
+        type: "human",
+        id: conn.userId,
+        name: conn.userName || conn.userId,
       },
       timestamp,
       payload: {
@@ -325,6 +325,7 @@ export class EventDispatcher {
         name: message.agent.name,
         provider: message.agent.provider,
         ownerId: conn.userId,
+        ownerName: conn.userName || conn.userId,
         status: message.agent.status,
         currentTask: message.agent.currentTask || null,
       },
@@ -356,9 +357,9 @@ export class EventDispatcher {
       type: "agent.status",
       projectId: conn.workspaceId,
       sender: {
-        type: "agent",
-        id: message.agentId,
-        name: agent ? agent.name : message.agentId,
+        type: "human",
+        id: conn.userId,
+        name: conn.userName || conn.userId,
       },
       timestamp,
       payload: {
@@ -366,6 +367,7 @@ export class EventDispatcher {
         name: agent ? agent.name : message.agentId,
         provider: agent ? agent.provider : "unknown",
         ownerId: conn.userId,
+        ownerName: conn.userName || conn.userId,
         status: message.status,
         task: message.task || null,
       },

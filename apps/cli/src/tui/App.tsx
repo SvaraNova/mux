@@ -107,17 +107,6 @@ export const App: React.FC<AppProps> = ({
       const active = registry.getActive();
       setCurrentStatus(active.status);
       setCurrentTask(active.currentTask);
-
-      if (client.isConnected()) {
-        client.registerAgent({
-          id: active.id,
-          name: active.name,
-          provider: active.provider,
-          ownerId: userId,
-          status: active.status,
-          currentTask: active.currentTask,
-        });
-      }
     };
 
     registry.on("log", handleLog);

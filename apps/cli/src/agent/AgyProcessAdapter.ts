@@ -87,10 +87,14 @@ export class AgyProcessAdapter extends EventEmitter {
         PATH: `${path.join(os.homedir(), ".local", "bin")}:${process.env.PATH || ""}`,
       };
 
-      this.currentProcess = spawn(this.binaryPath, ["-p", prompt], {
-        cwd: this.targetDir,
-        env: childEnv,
-      });
+      this.currentProcess = spawn(
+        this.binaryPath,
+        ["-p", prompt, "--dangerously-skip-permissions"],
+        {
+          cwd: this.targetDir,
+          env: childEnv,
+        }
+      );
 
       this.currentProcess.stdout.on("data", (chunk: Buffer) => {
         const text = chunk.toString();

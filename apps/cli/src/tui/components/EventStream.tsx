@@ -97,13 +97,14 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
 
           if (evt.type === "agent.registered") {
             const providerName = evt.payload?.name || evt.payload?.provider || "Agent";
+            const owner = evt.payload?.ownerName || senderName;
             return (
               <Box key={evt.id} flexDirection="row">
                 <Text color="gray">{time} </Text>
                 <Text color="magenta">🤖 </Text>
                 <Text color="white" bold>{providerName}</Text>
                 <Text color="gray"> linked to </Text>
-                <Text color="cyan">{senderName}</Text>
+                <Text color="cyan">{owner}</Text>
               </Box>
             );
           }
@@ -112,6 +113,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
             const provider = evt.payload?.provider || "agent";
             const status = evt.payload?.status;
             const task = evt.payload?.task;
+            const owner = evt.payload?.ownerName || senderName;
 
             if (status === "working") {
               return (
@@ -119,7 +121,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
                   <Text color="gray">{time} </Text>
                   <Text color="yellow">⚡ </Text>
                   <Text color="yellow" bold>{provider}</Text>
-                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="gray"> ({owner}): </Text>
                   <Text color="yellow">{task ? `"${task}"` : "working..."}</Text>
                 </Box>
               );
@@ -131,7 +133,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
                   <Text color="gray">{time} </Text>
                   <Text color="green">✓ </Text>
                   <Text color="green" bold>{provider}</Text>
-                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="gray"> ({owner}): </Text>
                   <Text color="green">ready / completed task</Text>
                 </Box>
               );
@@ -143,7 +145,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
                   <Text color="gray">{time} </Text>
                   <Text color="red">⚠ </Text>
                   <Text color="red" bold>{provider}</Text>
-                  <Text color="gray"> ({senderName}): </Text>
+                  <Text color="gray"> ({owner}): </Text>
                   <Text color="red">task failed or exited with error</Text>
                 </Box>
               );

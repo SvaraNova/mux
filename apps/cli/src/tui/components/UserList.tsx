@@ -20,7 +20,18 @@ export const UserList: React.FC<UserListProps> = ({ users, currentUserId }) => {
 
   const allUnique = Array.from(uniqueUsersMap.values());
   const onlineUsers = allUnique.filter((u) => u.isOnline);
-  const offlineUsers = allUnique.filter((u) => !u.isOnline);
+  const onlineNames = new Set(onlineUsers.map((u) => u.name.toLowerCase()));
+
+  // Only show offline users whose name is NOT currently online, and deduplicate by name
+  const seenOfflineNames = new Set<string>();
+  const offlineUsers: ActiveUser[] = [];
+  for (const u of allUnique) {
+    const lowerName = u.name.toLowerCase();
+    if (!u.isOnline && !onlineNames.has(lowerName) && !seenOfflineNames.has(lowerName)) {
+      seenOfflineNames.add(lowerName);
+      offlineUsers.push(u);
+    }
+  }
 
   return (
     <Box

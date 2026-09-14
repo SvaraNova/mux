@@ -1,1 +1,0 @@
-{"root":["./src/database.ts","./src/index.ts","./src/schema.ts","./src/repositories/eventrepo.ts","./src/repositories/messagerepo.ts","./src/repositories/userrepo.ts","./src/repositories/workspacerepo.ts"],"version":"5.9.3"}

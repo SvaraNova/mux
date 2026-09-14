@@ -1,1 +1,0 @@
-{"root":["./src/index.ts","./src/bin/mux.ts","./src/client/relayclient.ts","./src/tui/app.tsx","./src/tui/components/eventstream.tsx","./src/tui/components/header.tsx","./src/tui/components/inputbar.tsx","./src/tui/components/userlist.tsx"],"version":"5.9.3"}

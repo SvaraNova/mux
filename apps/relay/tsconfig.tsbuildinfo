@@ -1,1 +1,0 @@
-{"root":["./src/config.ts","./src/index.ts","./src/server.ts","./src/routes/api.ts","./src/ws/connectionmanager.ts","./src/ws/dispatcher.ts"],"version":"5.9.3"}

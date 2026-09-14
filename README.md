@@ -14,7 +14,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict_Mode-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![Node: >=20](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?logo=node.js)](https://nodejs.org/)
-[![Tests: Passing](https://img.shields.io/badge/Tests-10%2F10_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
+[![Tests: Passing](https://img.shields.io/badge/Tests-18%2F18_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
+[![Saweria](https://img.shields.io/badge/Saweria-Support_Creator-FF813F.svg?logo=coffee&logoColor=white)](https://saweria.co/svaranova)
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)](#installation)
 
 <p align="center">
@@ -26,8 +27,10 @@
 [Key Concepts](#-key-concepts) •
 [Visual Interface](#-visual-interface) •
 [Architecture](#-architecture) •
+[Multi-Agent](#-multi-agent-coordination-agy-codex-claude) •
 [Installation (All OS)](#-installation-guide) •
 [Quickstart](#-quickstart-guide) •
+[Support](#-support--sponsorship) •
 [Roadmap](#-mvp-roadmap)
 
 ---
@@ -313,6 +316,22 @@ Tests       18 passed (18)
 - [ ] **Phase 7 — Structured Handoff**: End-to-end task and branch handoff between agents.
 - [ ] **Phase 8 — Soft File Reservations**: Warning signals when agents touch overlapping source files.
 - [ ] **Phase 9 — mDNS LAN Discovery**: Zero-config network discovery (`mux discover`).
+
+---
+
+## ☕ Support & Sponsorship
+
+If you find `mux` exciting and valuable for your multiplayer development workflow, consider supporting the project and author on **Saweria**:
+
+<p align="center">
+  <a href="https://saweria.co/svaranova" target="_blank">
+    <img src="https://img.shields.io/badge/Saweria-Dukung%20Karya-FF813F?style=for-the-badge&logo=coffee&logoColor=white" alt="Dukung di Saweria" />
+  </a>
+</p>
+
+> 🧡 Setiap dukungan membantu keberlanjutan pengembangan fitur lanjutan `mux`, riset kolaborasi autonomous coding agents, dan pemeliharaan proyek open source ini.
+>
+> 🔗 **Donasi / Dukung via Saweria**: [https://saweria.co/svaranova](https://saweria.co/svaranova)
 
 ---
 

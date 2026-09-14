@@ -59,11 +59,28 @@ program
     const userName = options.user;
     const initialProvider = options.agent || "agy";
 
-    // If --split requested, delegate to SplitMultiplexer
+    // If --split requested: start relay first, then delegate to SplitMultiplexer
     if (options.split) {
+      const dbPath = options.db || path.join(targetDir, ".mux", "relay.db");
+      const relayUrl = `ws://localhost:${port}`;
       const escapedDir = targetDir.replace(/"/g, '\\"');
       const escapedProject = projectName.replace(/"/g, '\\"');
       const escapedUser = userName.replace(/"/g, '\\"');
+
+      // Start the relay server first so it's ready before panes connect
+      console.log(`Starting mux relay for workspace "${projectName}" on port ${port}...`);
+      try {
+        await createRelayServer({ port, host: options.host, dbPath });
+        console.log(`Relay ready at ${relayUrl}`);
+      } catch (err: any) {
+        if (err.code !== "EADDRINUSE") {
+          console.error("Failed to start relay:", err.message);
+          process.exit(1);
+        }
+        console.log(`Port ${port} already in use — reusing existing relay.`);
+      }
+
+      // muxCommand for the right (collab) pane — connects to the relay we just started
       const muxCommand = `mux host --port ${port} --host ${options.host} --project "${escapedProject}" --user "${escapedUser}" --agent "${initialProvider}" --dir "${escapedDir}" --collab-only`;
 
       SplitMultiplexer.launch({
@@ -71,6 +88,9 @@ program
         agentCmd: options.agentCmd,
         muxCommand,
         targetDir,
+        relayUrl,
+        workspace: projectName,
+        userName,
       });
       return;
     }

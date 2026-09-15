@@ -9,6 +9,8 @@ export interface ClientConnection {
   userName?: string;
   isAlive: boolean;
   connectedAt: string;
+  /** Channels this connection is actively subscribed to */
+  channels: Set<string>;
 }
 
 export class ConnectionManager {
@@ -25,6 +27,7 @@ export class ConnectionManager {
       ws,
       isAlive: true,
       connectedAt: new Date().toISOString(),
+      channels: new Set(["general"]), // auto-join #general
     };
     this.connections.set(socketId, conn);
     return conn;
@@ -49,6 +52,29 @@ export class ConnectionManager {
       conn.userId = userId;
       conn.userName = userName;
     }
+  }
+
+  /** Add connection to a channel */
+  joinChannel(socketId: string, channel: string): void {
+    const conn = this.connections.get(socketId);
+    if (conn) conn.channels.add(channel);
+  }
+
+  /** Remove connection from a channel */
+  leaveChannel(socketId: string, channel: string): void {
+    const conn = this.connections.get(socketId);
+    if (conn && channel !== "general") conn.channels.delete(channel); // can't leave #general
+  }
+
+  /** Get all unique channels with at least one active subscriber in a workspace */
+  getActiveChannels(workspaceId: string): string[] {
+    const channelSet = new Set<string>();
+    for (const conn of this.connections.values()) {
+      if (conn.workspaceId === workspaceId && conn.ws.readyState === WebSocket.OPEN) {
+        for (const ch of conn.channels) channelSet.add(ch);
+      }
+    }
+    return Array.from(channelSet).sort();
   }
 
   getByWorkspace(workspaceId: string): ClientConnection[] {

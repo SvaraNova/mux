@@ -5,6 +5,8 @@ import type { RelayEvent } from "@mux/protocol";
 interface EventStreamProps {
   events: RelayEvent[];
   height?: number;
+  /** When set, only show message.channel events for this channel (others still shown) */
+  activeChannel?: string;
 }
 
 function formatTime(isoString: string): string {
@@ -19,8 +21,17 @@ function formatTime(isoString: string): string {
   }
 }
 
-export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 }) => {
-  const visibleEvents = events.slice(-height);
+export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12, activeChannel = "general" }) => {
+  // Filter: channel messages only show if they match the active channel.
+  // Non-channel events (joins, agent status, etc.) are always shown.
+  const filtered = events.filter((evt) => {
+    if (evt.type === "message.channel") {
+      return (evt.payload?.channel || "general") === activeChannel;
+    }
+    return true;
+  });
+
+  const visibleEvents = filtered.slice(-height);
 
   return (
     <Box
@@ -36,9 +47,11 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
           <Text bold color="cyan">
             ⚡ ACTIVITY &amp; CHAT
           </Text>
+          <Text color="gray"> #</Text>
+          <Text color="cyan">{activeChannel}</Text>
         </Box>
         <Box>
-          <Text color="gray">{events.length} events</Text>
+          <Text color="gray">{filtered.length} events</Text>
         </Box>
       </Box>
 
@@ -72,10 +85,35 @@ export const EventStream: React.FC<EventStreamProps> = ({ events, height = 12 })
             );
           }
 
-          if (evt.type === "message.channel") {
+          if (evt.type === "channel.joined") {
             return (
               <Box key={evt.id} flexDirection="row">
                 <Text color="gray">{time} </Text>
+                <Text color="cyan">→ </Text>
+                <Text color="cyan" bold>{evt.payload?.userName || senderName}</Text>
+                <Text color="gray"> joined </Text>
+                <Text color="cyan">#{evt.payload?.channel}</Text>
+              </Box>
+            );
+          }
+
+          if (evt.type === "channel.left") {
+            return (
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                <Text color="gray">← {evt.payload?.userName || senderName} left #{evt.payload?.channel}</Text>
+              </Box>
+            );
+          }
+
+          if (evt.type === "message.channel") {
+            const channel = evt.payload?.channel || "general";
+            return (
+              <Box key={evt.id} flexDirection="row">
+                <Text color="gray">{time} </Text>
+                {channel !== "general" && (
+                  <Text color="cyan">[#{channel}] </Text>
+                )}
                 <Text color="cyan" bold>{senderName} </Text>
                 <Text color="gray">› </Text>
                 <Text color="white">{evt.payload?.text}</Text>

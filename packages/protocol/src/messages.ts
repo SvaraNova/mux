@@ -82,6 +82,21 @@ export const ClientAgentReplyMessageSchema = z.object({
 
 export type ClientAgentReplyMessage = z.infer<typeof ClientAgentReplyMessageSchema>;
 
+// Phase 3: Channel management
+export const ClientJoinChannelMessageSchema = z.object({
+  type: z.literal("client.join_channel"),
+  channel: z.string().min(1),
+});
+
+export type ClientJoinChannelMessage = z.infer<typeof ClientJoinChannelMessageSchema>;
+
+export const ClientLeaveChannelMessageSchema = z.object({
+  type: z.literal("client.leave_channel"),
+  channel: z.string().min(1),
+});
+
+export type ClientLeaveChannelMessage = z.infer<typeof ClientLeaveChannelMessageSchema>;
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientJoinMessageSchema,
   ClientSendMessageSchema,
@@ -91,6 +106,8 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientAgentStatusMessageSchema,
   ClientAgentAskMessageSchema,
   ClientAgentReplyMessageSchema,
+  ClientJoinChannelMessageSchema,
+  ClientLeaveChannelMessageSchema,
 ]);
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;

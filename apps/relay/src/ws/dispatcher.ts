@@ -62,6 +62,12 @@ export class EventDispatcher {
         case "client.agent_reply":
           this.handleAgentReply(conn, message);
           break;
+        case "client.join_channel":
+          this.handleJoinChannel(conn, message);
+          break;
+        case "client.leave_channel":
+          this.handleLeaveChannel(conn, message);
+          break;
       }
     } catch (err: any) {
       console.error("Error in dispatcher.handleMessage:", err);
@@ -460,6 +466,57 @@ export class EventDispatcher {
       type: "server.event",
       event: replyEvent,
     });
+  }
+
+  private handleJoinChannel(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.join_channel" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) {
+      this.sendError(conn, "UNAUTHENTICATED", "Must join a workspace before joining a channel");
+      return;
+    }
+
+    const channel = message.channel.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+    this.connections.joinChannel(conn.socketId, channel);
+
+    const timestamp = new Date().toISOString();
+    const evt: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "channel.joined",
+      projectId: conn.workspaceId,
+      sender: { type: "human", id: conn.userId, name: conn.userName },
+      target: { type: "channel", id: channel },
+      timestamp,
+      payload: { channel, userId: conn.userId, userName: conn.userName },
+    };
+
+    this.db.events.save(evt);
+    this.connections.broadcastToWorkspace(conn.workspaceId, { type: "server.event", event: evt });
+  }
+
+  private handleLeaveChannel(
+    conn: ClientConnection,
+    message: Extract<ClientMessage, { type: "client.leave_channel" }>
+  ): void {
+    if (!conn.workspaceId || !conn.userId) return;
+
+    const channel = message.channel.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+    this.connections.leaveChannel(conn.socketId, channel);
+
+    const timestamp = new Date().toISOString();
+    const evt: RelayEvent = {
+      id: crypto.randomUUID(),
+      type: "channel.left",
+      projectId: conn.workspaceId,
+      sender: { type: "human", id: conn.userId, name: conn.userName },
+      target: { type: "channel", id: channel },
+      timestamp,
+      payload: { channel, userId: conn.userId, userName: conn.userName },
+    };
+
+    this.db.events.save(evt);
+    this.connections.broadcastToWorkspace(conn.workspaceId, { type: "server.event", event: evt });
   }
 
   private sendError(conn: ClientConnection, code: string, message: string): void {

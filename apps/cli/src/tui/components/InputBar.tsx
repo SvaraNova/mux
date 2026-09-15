@@ -7,6 +7,7 @@ interface InputBarProps {
   onCycleAgent?: () => void;
   onOpenTerminal?: () => void;
   activeProvider?: string;
+  activeChannel?: string;
   disabled?: boolean;
   collabOnly?: boolean;
 }
@@ -17,6 +18,7 @@ export const InputBar: React.FC<InputBarProps> = ({
   onCycleAgent,
   onOpenTerminal,
   activeProvider = "agy",
+  activeChannel = "general",
   disabled,
   collabOnly = false,
 }) => {
@@ -80,22 +82,30 @@ export const InputBar: React.FC<InputBarProps> = ({
   });
 
   let borderColor = "cyan";
-  let modeBadge = "💬 CHAT";
   let modeColor = "cyan";
 
+  let modeBadge: React.ReactNode;
   if (isAiMode) {
     borderColor = "yellow";
-    modeBadge = `🤖 AI (${activeProvider})`;
     modeColor = "yellow";
+    modeBadge = <Text bold color="yellow">🤖 AI ({activeProvider}) ❯ </Text>;
   } else if (isCmdMode) {
     borderColor = "magenta";
-    modeBadge = "⚡ CMD";
     modeColor = "magenta";
+    modeBadge = <Text bold color="magenta">⚡ CMD ❯ </Text>;
+  } else {
+    modeBadge = (
+      <Text bold color="cyan">
+        💬 <Text color="gray">#</Text>
+        <Text color="cyan">{activeChannel}</Text>
+        <Text color="cyan"> ❯ </Text>
+      </Text>
+    );
   }
 
   const hintText = collabOnly
-    ? "(Type team chat message │ /msg @user text │ /help for commands)"
-    : "(Type message to chat │ > <prompt> for AI │ /help for commands)";
+    ? "(Type team chat message │ /msg @user text │ /ch <name>: switch channel │ /help)"
+    : "(Type message to chat │ > <prompt> for AI │ /ch <name>: switch channel │ /help)";
 
   const shortcutText = collabOnly
     ? "[Ctrl+b ←: switch to agent pane │ Ctrl+C: quit]"
@@ -110,9 +120,7 @@ export const InputBar: React.FC<InputBarProps> = ({
       justifyContent="space-between"
     >
       <Box flexDirection="row" flexGrow={1}>
-        <Text bold color={modeColor}>
-          {modeBadge} ❯{" "}
-        </Text>
+        {modeBadge}
         <Text color={isAiMode ? "yellow" : "white"}>{value}</Text>
         <Text color="gray">█</Text>
         {value.length === 0 && (

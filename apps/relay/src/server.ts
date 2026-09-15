@@ -41,7 +41,7 @@ export async function createRelayServer(
   const dispatcher = new EventDispatcher(db, connections);
 
   const server = http.createServer((req, res) => {
-    handleHttpRequest(req, res, db);
+    handleHttpRequest(req, res, db, connections);
   });
 
   const wss = new WebSocketServer({ server });

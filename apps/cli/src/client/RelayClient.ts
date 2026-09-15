@@ -170,6 +170,16 @@ export class RelayClient extends EventEmitter {
     });
   }
 
+  /** Join a named channel (e.g. "backend", "frontend"). Sanitised server-side. */
+  joinChannel(channel: string): void {
+    this.send({ type: "client.join_channel", channel });
+  }
+
+  /** Leave a named channel. Cannot leave #general. */
+  leaveChannel(channel: string): void {
+    this.send({ type: "client.leave_channel", channel });
+  }
+
   private startHeartbeat(): void {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {

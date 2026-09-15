@@ -99,6 +99,23 @@ export const AgentReplyPayloadSchema = z.object({
 
 export type AgentReplyPayload = z.infer<typeof AgentReplyPayloadSchema>;
 
+// Phase 3: Channel events
+export const ChannelJoinedPayloadSchema = z.object({
+  channel: z.string().min(1),
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+});
+
+export type ChannelJoinedPayload = z.infer<typeof ChannelJoinedPayloadSchema>;
+
+export const ChannelLeftPayloadSchema = z.object({
+  channel: z.string().min(1),
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+});
+
+export type ChannelLeftPayload = z.infer<typeof ChannelLeftPayloadSchema>;
+
 export const RelayEventSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),

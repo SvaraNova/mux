@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Box, Text } from "ink";
 import crypto from "node:crypto";
 import type { RelayClient } from "../client/RelayClient.js";
@@ -9,6 +9,7 @@ import { EventStream } from "./components/EventStream.js";
 import { InputBar } from "./components/InputBar.js";
 import { Banner } from "./components/Banner.js";
 import { AgentTerminal } from "./components/AgentTerminal.js";
+import { ChannelList, type ChannelItem } from "./components/ChannelList.js";
 import {
   AgentRegistry,
   type AgentInfo,
@@ -47,6 +48,10 @@ export const App: React.FC<AppProps> = ({
   const [events, setEvents] = useState<RelayEvent[]>([]);
   const [agentLogs, setAgentLogs] = useState<AgentLogLine[]>([]);
   const [activeProvider, setActiveProvider] = useState<AgentProvider>(initialProvider);
+
+  // Phase 3: Channel management
+  const [activeChannel, setActiveChannel] = useState<string>("general");
+  const [channels, setChannels] = useState<ChannelItem[]>([{ name: "general", unread: 0 }]);
 
   const registry = useMemo(() => {
     return new AgentRegistry({
@@ -211,6 +216,25 @@ export const App: React.FC<AppProps> = ({
             )
           );
         }
+      } else if (event.type === "channel.joined") {
+        // Ensure the channel appears in the list
+        const ch = event.payload?.channel as string | undefined;
+        if (ch) {
+          setChannels((prev) => {
+            if (prev.some((c) => c.name === ch)) return prev;
+            return [...prev, { name: ch, unread: 0 }];
+          });
+        }
+      } else if (event.type === "message.channel") {
+        // Increment unread for non-active channels
+        const ch = (event.payload?.channel as string | undefined) || "general";
+        setChannels((prev) =>
+          prev.map((c) =>
+            c.name === ch && ch !== activeChannel
+              ? { ...c, unread: c.unread + 1 }
+              : c
+          )
+        );
       }
     };
 
@@ -246,6 +270,25 @@ export const App: React.FC<AppProps> = ({
     };
   }, [client, projectName]);
 
+  /** Switch to a channel by name, joining it on the relay if new */
+  const switchChannel = useCallback(
+    (name: string) => {
+      const clean = name.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      setActiveChannel(clean);
+      // Clear unread for this channel
+      setChannels((prev) =>
+        prev.map((c) => (c.name === clean ? { ...c, unread: 0 } : c))
+      );
+      // Ensure we're subscribed on the relay
+      const exists = channels.some((c) => c.name === clean);
+      if (!exists) {
+        setChannels((prev) => [...prev, { name: clean, unread: 0 }]);
+      }
+      client.joinChannel(clean);
+    },
+    [channels, client]
+  );
+
   const handleSubmit = (input: string) => {
     if (input.startsWith("/")) {
       const parts = input.split(" ");
@@ -261,10 +304,65 @@ export const App: React.FC<AppProps> = ({
           payload: {
             level: "info",
             message:
-              "AI Agent Terminal: > <prompt> │ /term or <Ctrl+O> │ Tab: switch agent │ Chat: <message> │ /msg @<user> <text> │ /clear │ /help │ /quit",
+              "AI Agent Terminal: > <prompt> │ /term or <Ctrl+O> │ Tab: switch agent │ Chat: <message> │ /msg @<user> <text> │ /ch <name>: switch channel │ /channels: list channels │ /clear │ /help │ /quit",
           },
         };
         setEvents((prev) => [...prev, helpEvent]);
+        return;
+      }
+
+      // /ch <name> or /channel <name> — switch active channel
+      if (cmd === "/ch" || cmd === "/channel") {
+        const chName = parts[1]?.replace(/^#/, "");
+        if (!chName) {
+          setEvents((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              type: "system.event",
+              projectId: projectName,
+              sender: { type: "system", id: "client" },
+              timestamp: new Date().toISOString(),
+              payload: { level: "warn", message: "Usage: /ch <channel-name>" },
+            },
+          ]);
+          return;
+        }
+        switchChannel(chName);
+        setEvents((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            type: "system.event",
+            projectId: projectName,
+            sender: { type: "system", id: "client" },
+            timestamp: new Date().toISOString(),
+            payload: { level: "info", message: `Switched to #${chName.toLowerCase()}` },
+          },
+        ]);
+        return;
+      }
+
+      // /channels — list known channels
+      if (cmd === "/channels") {
+        const chList = channels.map((c) => `#${c.name}${c.unread > 0 ? ` (${c.unread})` : ""}`).join("  ");
+        setEvents((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            type: "system.event",
+            projectId: projectName,
+            sender: { type: "system", id: "client" },
+            timestamp: new Date().toISOString(),
+            payload: { level: "info", message: `Channels: ${chList || "#general"}` },
+          },
+        ]);
+        return;
+      }
+
+      // /join <channel> — alias for /ch
+      if (cmd === "/join" && parts[1]?.startsWith("#")) {
+        switchChannel(parts[1].slice(1));
         return;
       }
 
@@ -453,8 +551,8 @@ export const App: React.FC<AppProps> = ({
       return;
     }
 
-    // Regular channel broadcast
-    client.sendMessage(input, "general");
+    // Regular channel broadcast — use active channel
+    client.sendMessage(input, activeChannel);
   };
 
   const handleCycleAgent = () => {
@@ -535,7 +633,12 @@ export const App: React.FC<AppProps> = ({
 
       <Box flexDirection="row" marginY={1}>
         <UserList users={users} currentUserId={userId} />
-        <EventStream events={events} height={10} />
+        <ChannelList
+          channels={channels}
+          activeChannel={activeChannel}
+          onSwitch={switchChannel}
+        />
+        <EventStream events={events} height={10} activeChannel={activeChannel} />
       </Box>
 
       <InputBar
@@ -544,6 +647,7 @@ export const App: React.FC<AppProps> = ({
         onCycleAgent={!collabOnly ? handleCycleAgent : undefined}
         onOpenTerminal={!collabOnly ? handleOpenTerminal : undefined}
         activeProvider={activeProvider}
+        activeChannel={activeChannel}
         collabOnly={collabOnly}
       />
     </Box>

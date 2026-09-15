@@ -14,7 +14,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict_Mode-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![Node: >=20](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?logo=node.js)](https://nodejs.org/)
-[![Tests: Passing](https://img.shields.io/badge/Tests-22%2F22_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
+[![Tests: Passing](https://img.shields.io/badge/Tests-26%2F26_Passing-brightgreen.svg?logo=vitest)](https://vitest.dev/)
 [![Saweria](https://img.shields.io/badge/Saweria-Support_Creator-FF813F.svg?logo=coffee&logoColor=white)](https://saweria.co/svaranova)
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)](#installation)
 
@@ -283,6 +283,58 @@ mux join ws://192.168.1.50:7331 --split --user Bob --agent claude
 
 ---
 
+## 💬 Dedicated Channels (`#general`, `#backend`, `#frontend`)
+
+Organize team conversations by topic with real-time channel switching — no server restart needed:
+
+```bash
+# Inside the mux TUI input bar:
+/ch backend           # Switch to (or create) #backend channel
+/channel frontend     # Alternative syntax
+/channels             # List all active channels with unread count
+/join #devops         # Join a channel
+```
+
+Every client **auto-joins `#general`** on connection. Channels are created on first use.
+
+```text
+┌── # CHANNELS ──────┐  ┌── ⚡ ACTIVITY & CHAT #backend ─────────────────┐
+│                    │  │                                                  │
+│ ▶ #general         │  │ [15:41:02] → fajar joined #backend               │
+│   #backend      2  │  │ [15:41:20] fajar › API routes are ready!         │
+│   #devops          │  │ [15:42:05] [#backend] yoga › nice work!          │
+└────────────────────┘  └──────────────────────────────────────────────────┘
+```
+
+The number next to a channel is **unread messages** since you last viewed it.
+
+---
+
+## 📡 Audit Stream (`/api/events`)
+
+Query the complete event history or stream live events via **Server-Sent Events**:
+
+```bash
+# Paginated REST query (filtering supported)
+curl "http://localhost:7331/api/events?workspace=my-project&limit=50"
+curl "http://localhost:7331/api/events?workspace=my-project&channel=backend"
+curl "http://localhost:7331/api/events?workspace=my-project&type=message.channel&since=2024-01-01T00:00:00Z"
+
+# Live SSE stream — starts with last 50 events, then receives all new events in real-time
+curl -N "http://localhost:7331/api/events/stream?workspace=my-project"
+```
+
+| Param | Description | Example |
+| :--- | :--- | :--- |
+| `workspace` | **Required** — workspace ID | `my-project` |
+| `limit` | Max events per page (max 500) | `50` |
+| `offset` | Pagination offset | `100` |
+| `type` | Filter by event type | `message.channel` |
+| `channel` | Filter by channel name | `backend` |
+| `since` | ISO timestamp lower bound | `2024-01-01T00:00:00Z` |
+
+---
+
 ## 🔌 Team MCP Server (`mux mcp`)
 
 How do AI agents running on different laptops talk directly to each other? Through the **Model Context Protocol (MCP)**!
@@ -344,6 +396,7 @@ pnpm test
 
 Test results:
 ```text
+ ✓ tests/channels.test.ts    (4 tests)
  ✓ tests/mcp.test.ts         (4 tests)
  ✓ tests/multiplayer.test.ts (2 tests)
  ✓ tests/multi_agent.test.ts (5 tests)
@@ -351,8 +404,8 @@ Test results:
  ✓ tests/agent.test.ts       (2 tests)
  ✓ tests/protocol.test.ts    (5 tests)
 
-Test Files  6 passed (6)
-Tests       22 passed (22)
+Test Files  7 passed (7)
+Tests       26 passed (26)
 ```
 
 ---
@@ -361,7 +414,7 @@ Tests       22 passed (22)
 
 - [x] **Phase 1 — Skeleton & Core Relay**: Monorepo, shared Zod protocol, SQLite persistence, WebSocket hub, interactive Ink TUI, multi-client test.
 - [x] **Phase 2 — Multi-Agent Coordination**: Provider-agnostic `AgentAdapter`, `AgentRegistry`, `agy` / `codex` / `claude` support, prompt routing (`@agent`), and LAN presence.
-- [ ] **Phase 3 — Realtime Channels & Audit Stream**: Dedicated channels (`#general`, `#backend`), `/events` audit stream.
+- [x] **Phase 3 — Realtime Channels & Audit Stream**: Dedicated channels (`#general`, `#backend`, `#frontend`), `/ch` command, unread badges, `/api/events` REST endpoint, `/api/events/stream` SSE live audit.
 - [ ] **Phase 4 — Task Coordination**: Task creation, claiming, progress states, and live broadcast.
 - [ ] **Phase 5 — Git State Awareness**: Branch detection, commit notifications (`git.commit.created`), dirty state tracking.
 - [x] **Phase 6 — Team MCP Tools**: Local Model Context Protocol server exposing `team.*` tool calls (`team_ask_agent`, `team_reply_agent`, etc.).
